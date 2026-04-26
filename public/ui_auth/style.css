@@ -1,0 +1,437 @@
+/* --- RESET & VARIABEL --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* --- 1. BACKGROUND UTAMA (KONSTAN/DIAM) --- */
+body {
+    background-image: 
+        linear-gradient(
+            135deg, 
+            rgba(30, 60, 90, 0.2) 0%,   
+            rgba(15, 30, 50, 0.7) 50%,  
+            rgba(5, 15, 25, 0.95) 100%  
+        ),
+        url('Background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+}
+
+/* --- 2. LAYER ANIMASI HIGHLIGHT LEWAT (OBJEK BARU) --- */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    
+    background: linear-gradient(
+        -45deg, 
+        rgba(72, 203, 232, 0) 0%,      
+        rgba(72, 203, 232, 0) 35%,     
+        rgba(72, 203, 232, 0.05) 45%,  
+        rgba(72, 203, 232, 0.194) 50%,  
+        rgba(72, 203, 232, 0.05) 55%,  
+        rgba(72, 203, 232, 0) 65%,     
+        rgba(72, 203, 232, 0) 100%     
+    );
+    
+    background-size: 250% 250%; 
+    animation: highlightSweep 10s ease-in-out infinite; 
+    
+    pointer-events: none; 
+    z-index: 1; 
+}
+
+@keyframes highlightSweep {
+    0% { background-position: 100% 100%; }
+    50% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+
+/* --- LAYOUT UTAMA --- */
+.container {
+    position: relative;
+    z-index: 2; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 90%;
+    max-width: 1200px;
+    gap: 50px;
+}
+
+/* --- BAGIAN KIRI (BRANDING) --- */
+.brand-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-bottom: 50px;
+    
+    /* ANIMASI MASUK: Muncul dari kiri */
+    opacity: 0;
+    animation: slideInLeft 1s cubic-bezier(0.25, 0.8, 0.25, 1) 0.3s forwards;
+}
+
+.logo-title {
+    font-size: 6rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
+.swoosh-line {
+    width: 300px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+}
+
+.logo-subtitle {
+    font-size: 2.2rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.logo-group {
+    font-size: 1.2rem;
+    font-weight: 300;
+    margin-top: 5px;
+}
+
+/* --- BAGIAN KANAN (GLASS CARD) --- */
+.login-section {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Utility untuk JS Toggle Card */
+.hidden {
+    display: none !important;
+}
+
+.glass-card {
+    position: relative;
+    width: 100%;
+    max-width: 550px; 
+    padding: 65px 70px; 
+    
+    background: linear-gradient(
+        135deg, 
+        rgba(255, 255, 255, 0.08) 0%, 
+        rgba(255, 255, 255, 0.01) 100%
+    );
+    
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 40px; 
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.3),
+        inset 0 0 2px rgba(255, 255, 255, 0.15); 
+    text-align: left; 
+    
+    /* ANIMASI MASUK: Muncul dari kanan */
+    opacity: 0;
+    animation: slideInRight 1s cubic-bezier(0.25, 0.8, 0.25, 1) 0.6s forwards;
+}
+
+/* STROKE CARD DIKEMBALIKAN DIAM (KIRI-KANAN SAJA) */
+.glass-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 40px; 
+    padding: 2px; 
+    background: linear-gradient(
+        90deg, 
+        rgba(72, 203, 232, 0.9) 0%,    
+        rgba(255, 255, 255, 0) 10%,    
+        rgba(255, 255, 255, 0) 90%,    
+        rgba(72, 203, 232, 0.9) 100%   
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* --- TIPOGRAFI DALAM CARD --- */
+.form-title {
+    font-size: 3rem; 
+    font-weight: 700;
+    margin-bottom: 15px; 
+    letter-spacing: -1px;
+}
+
+/* Font khusus untuk register agar muat 1 baris */
+.register-title {
+    font-size: 2.3rem; 
+    letter-spacing: -0.5px;
+}
+
+.welcome-text {
+    margin-bottom: 30px; 
+}
+
+.welcome-text h3 {
+    font-size: 1.3rem; 
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.welcome-text p {
+    font-size: 0.95rem; 
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* --- FORM & INPUT --- */
+.input-row {
+    display: flex;
+    gap: 15px; /* Jarak antara First Name dan Last Name */
+}
+
+.input-row .input-group {
+    flex: 1; /* Membagi dua rata kolomnya */
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 20px; 
+    border-radius: 50px; 
+}
+
+/* Stroke Cahaya Kiri-Kanan pada Input */
+.input-group::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50px; 
+    padding: 1.5px; 
+    background: linear-gradient(
+        90deg, 
+        rgba(72, 203, 232, 0.8) 0%, 
+        rgba(255, 255, 255, 0) 20%, 
+        rgba(255, 255, 255, 0) 80%, 
+        rgba(72, 203, 232, 0.8) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2; 
+}
+
+.input-icon {
+    position: absolute;
+    left: 20px; 
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px; 
+    height: 20px;
+    opacity: 0.9;
+    z-index: 3;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 15px 20px 15px 55px; 
+    background: rgba(84, 137, 148, 0.3); 
+    border: none; 
+    border-radius: 50px; 
+    font-size: 1rem; 
+    color: #fff;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+/* Input TANPA ICON (Untuk First Name & Last Name) */
+.input-group input.no-icon {
+    padding-left: 25px; 
+}
+
+.input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 300;
+}
+
+.input-group input:focus {
+    background: rgba(84, 137, 148, 0.5);
+}
+
+.input-group:focus-within::before {
+    background: linear-gradient(90deg, rgba(72, 203, 232, 1) 0%, rgba(72, 203, 232, 0.2) 50%, rgba(72, 203, 232, 1) 100%);
+}
+
+/* --- CHECKBOX --- */
+.remember-me {
+    margin-bottom: 25px; 
+    padding-left: 5px; 
+}
+
+.remember-me label {
+    font-size: 0.85rem; 
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.remember-me input[type="checkbox"] {
+    width: 16px; 
+    height: 16px;
+    cursor: pointer;
+    accent-color: #015f5b;
+}
+
+/* --- TOMBOL LOGIN --- */
+.login-btn {
+    position: relative;
+    width: 100%;
+    padding: 15px; 
+    background: linear-gradient(180deg, #006363, #002733); 
+    border: none; 
+    border-radius: 50px;
+    color: white;
+    font-size: 1.1rem; 
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.login-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50px; 
+    padding: 2px; 
+    background: linear-gradient(
+        90deg, 
+        rgba(72, 203, 232, 1) 0%, 
+        rgba(255, 255, 255, 0) 5%, 
+        rgba(255, 255, 255, 0) 95%, 
+        rgba(72, 203, 232, 1) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(1, 95, 91, 0.6);
+}
+
+/* --- FOOTER CARD --- */
+.card-footer-left {
+    text-align: left;
+    margin-top: 25px; 
+}
+
+.card-footer-left p {
+    font-size: 0.8rem; 
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.card-footer-left i {
+    font-style: italic;
+    font-weight: 300;
+    opacity: 0.8;
+}
+
+.card-footer-left strong {
+    font-weight: 500;
+}
+
+.card-footer-center {
+    text-align: center;
+    margin-top: 30px; 
+}
+
+.card-footer-center p {
+    font-size: 0.85rem; 
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.card-footer-center a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    margin-left: 5px;
+}
+
+.card-footer-center a:hover {
+    text-decoration: underline;
+}
+
+/* --- RESPONSIVE DESIGN --- */
+@media (max-width: 900px) {
+    .container {
+        flex-direction: column;
+        justify-content: center;
+        gap: 40px;
+        text-align: center;
+    }
+
+    .brand-section {
+        align-items: center;
+        padding-bottom: 0;
+    }
+
+    .logo-title {
+        font-size: 4rem;
+    }
+
+    .logo-subtitle {
+        font-size: 1.5rem;
+    }
+
+    .login-section {
+        justify-content: center;
+    }
+}
+
+/* =========================================
+   KEYFRAMES ANIMASI ENTRANCE SAAT LOAD 
+   ========================================= */
+
+/* Logo bergeser dari arah kiri ke kanan */
+@keyframes slideInLeft {
+    0% { 
+        opacity: 0; 
+        transform: translateX(-50px); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: none;
+    }
+}
+
+/* Glass Card bergeser dari arah kanan ke kiri */
+@keyframes slideInRight {
+    0% { 
+        opacity: 0; 
+        transform: translateX(50px); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: none;
+    }
+}
