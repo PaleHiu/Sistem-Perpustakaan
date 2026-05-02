@@ -1,0 +1,170 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: sans-serif;
+}
+
+body {
+  background: #f3f6f9;
+}
+
+.container {
+  display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: #1f3c45;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 20px;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  color: white;
+}
+
+.sidebar nav a.active {
+  background: #2ca57c;
+}
+
+.sidebar nav a:hover {
+  background: #2ca57c;
+}
+
+.user {
+  margin-top: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.user img {
+  border-radius: 50%;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  padding: 20px 30px;
+}
+
+.main h1 {
+  margin-bottom: 20px;
+}
+
+/* TOPBAR */
+.topbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.topbar input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+}
+
+.topbar button {
+  padding: 10px 15px;
+  border-radius: 20px;
+  border: none;
+  background: #eaeaea;
+  cursor: pointer;
+}
+
+/* FILTER */
+.filters {
+  margin-bottom: 20px;
+}
+
+.filters button {
+  padding: 8px 14px;
+  margin-right: 8px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+.filters button.active {
+  background: #2ca57c;
+  color: white;
+  border: none;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* CARD */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.cover {
+  height: 120px;
+  background: #2ca57c;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.card h3 {
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.card p {
+  font-size: 12px;
+  color: gray;
+  margin-bottom: 10px;
+}
+
+.stock {
+  background: #e0f5ec;
+  color: #2ca57c;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.out {
+  background: #ffe5e5;
+  color: red;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+/* DISABLED */
+.card.disabled {
+  opacity: 0.5;
+}

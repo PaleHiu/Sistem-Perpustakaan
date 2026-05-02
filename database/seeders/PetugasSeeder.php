@@ -9,21 +9,23 @@ use Carbon\Carbon;
 
 class PetugasSeeder extends Seeder
 {
-    public function run(): void
-    {
-        $userId = DB::table('users')->insertGetId([
-            'email'      => 'admin@sipus.id',
-            'password'   => Hash::make('Admin123'),
-            'role'       => 'Petugas',
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
+public function run(): void
+{
+    // 1. Buat User untuk Login Admin
+    $userId = DB::table('users')->insertGetId([
+        'email'      => 'admin@sipus.id',
+        'password'   => Hash::make('Admin123'),
+        'role'       => 'Petugas',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
 
-        DB::table('petugas')->insert([
-            'user_id'      => $userId,
-            'nama_petugas' => 'Administrator Utama',
-            'created_at'   => Carbon::now(),
-            'updated_at'   => Carbon::now(),
-        ]);
-    }
+    // 2. Buat Profilnya di tabel Petugas
+    DB::table('petugas')->insert([
+        'user_id'      => $userId,
+        'nama_petugas' => 'Administrator Utama',
+        'created_at'   => now(),
+        'updated_at'   => now(),
+    ]);
+}
 }

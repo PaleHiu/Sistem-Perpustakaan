@@ -18,9 +18,9 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -44,5 +44,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Relasi ke Profil Anggota (Pintu ke Kamar Member)
+     * Mengikuti ERD: 1 User memiliki 1 Anggota
+     */
+    public function anggota()
+    {
+        return $this->hasOne(Anggota::class, 'user_id');
     }
 }
