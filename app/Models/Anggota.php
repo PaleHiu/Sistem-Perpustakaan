@@ -17,6 +17,7 @@ class Anggota extends Model
         'nik', 
         'no_hp', 
         'alamat', 
+        'foto_profil',
         'status_verifikasi',
         'dokumen_identitas',
     ];

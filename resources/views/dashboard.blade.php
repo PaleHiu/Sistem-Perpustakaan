@@ -131,9 +131,16 @@
                             {{-- Blade akan mengecek variabel $topMembers nanti. Jika kosong, tampilkan pesan @empty --}}
                             @forelse($topMembers ?? [] as $member)
                             <div class="member-card">
-                                <div style="width: 45px; height: 45px; border-radius: 50%; background: #1f3c45; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                    <i class="fa-solid fa-user" style="color: rgba(255,255,255,0.7); font-size: 16px;"></i>
-                                </div>
+                                @if($member->foto_profil)
+                                    <img src="{{ asset('storage/' . $member->foto_profil) }}"
+                                        style="width:45px;height:45px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+                                @else
+                                    <div style="width:45px;height:45px;border-radius:50%;background:#1f3c45;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <span style="color:white;font-size:16px;font-weight:700;">
+                                            {{ strtoupper(substr($member->nama_lengkap, 0, 1)) }}
+                                        </span>
+                                    </div>
+                                @endif
                                 <div>
                                     <strong>{{ $member->nama_lengkap }}</strong>
                                     <p style="font-size: 12px; color: #718096;">Member</p>

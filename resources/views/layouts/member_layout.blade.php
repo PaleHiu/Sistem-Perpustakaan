@@ -85,7 +85,15 @@
             <div class="user-area" style="display: flex; gap: 20px; align-items: center;">
                 <i class="fa-regular fa-bell" style="font-size: 20px; color: #7d8a95;"></i>
                 <i class="fa-regular fa-comment" style="font-size: 20px; color: #7d8a95;"></i>
-                <img src="https://i.pravatar.cc/40" style="border-radius: 50%;" alt="User">
+                @php $fotoProfil = Auth::user()->anggota?->foto_profil; @endphp
+                @if($fotoProfil)
+                    <img src="{{ asset('storage/' . $fotoProfil) }}"
+                        style="width:40px;height:40px;border-radius:50%;object-fit:cover;" alt="User">
+                @else
+                    <div style="width:40px;height:40px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;">
+                        {{ strtoupper(substr(Auth::user()->anggota?->nama_lengkap ?? Auth::user()->name ?? 'U', 0, 1)) }}
+                    </div>
+                @endif
             </div>
         </header>
 

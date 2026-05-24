@@ -52,6 +52,7 @@ Route::get('/dashboard', function () {
         'totalBooks', 'totalMembers', 'overdueBooks',
         'chartData', 'topMembers', 'recentActivities'
     ));
+
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Buku
@@ -96,6 +97,7 @@ Route::post('/books', function (\Illuminate\Http\Request $request) {
         'tahun_terbit'  => $request->tahun_terbit,
         'stok_total'    => $request->stok_total,
         'stok_tersedia' => $request->stok_total,
+        'cover' => $coverPath,
     ]);
     return redirect()->route('books.index')->with('success', 'Buku berhasil ditambahkan!');
 })->middleware(['auth', 'verified'])->name('books.store');
@@ -154,33 +156,6 @@ Route::get('/members', function () {
     $members = \App\Models\Anggota::with('user')->latest()->get();
     return view('members', compact('members'));
 })->middleware(['auth', 'verified'])->name('members.index');
-
-// RUTE BARU: Menangani Proses Approve / Reject dari Admin
-Route::patch('/members/{id}/verify', function (\Illuminate\Http\Request $request, $id) {
-    if (Auth::user()->role !== 'Petugas') {
-        return redirect()->route('member.dashboard');
-    }
-
-    // 1. Validasi input status yang dikirim (Approved / Rejected)
-    $request->validate([
-        'status_verifikasi' => 'required|in:Approved,Rejected',
-    ]);
-
-    // 2. Cari data anggota berdasarkan ID
-    $member = \App\Models\Anggota::findOrFail($id);
-
-    // 3. Update status verifikasi di database
-    $member->update([
-        'status_verifikasi' => $request->status_verifikasi
-    ]);
-
-    // 4. Set pesan sukses sesuai tindakan
-    $pesan = $request->status_verifikasi === 'Approved' 
-        ? 'Anggota "' . $member->nama_lengkap . '" berhasil disetujui (Approved)!' 
-        : 'Dokumen anggota "' . $member->nama_lengkap . '" telah ditolak (Rejected).';
-
-    return redirect()->route('members.index')->with('success', $pesan);
-})->middleware(['auth', 'verified'])->name('members.verify');
 
 Route::delete('/members/{id}', function ($id) {
     if (Auth::user()->role !== 'Petugas') {
@@ -273,9 +248,8 @@ Route::post('/borrowing/{id}/kembalikan', function ($id) {
 
 })->middleware(['auth', 'verified'])->name('borrowing.kembalikan');
 
-
 // ============================================
-// ROUTE MEMBER (Area Terbuka / Tanpa KYC)
+// ROUTE MEMBER
 // ============================================
 
 Route::get('/member/dashboard', function () {
@@ -315,6 +289,7 @@ Route::get('/member/dashboard', function () {
         'sedangDipinjam', 'totalRiwayat', 'totalDenda',
         'pinjamanAktif', 'aktivitasTerbaru'
     ));
+
 })->middleware(['auth', 'verified'])->name('member.dashboard');
 
 Route::get('/member/katalog', function () {
@@ -324,6 +299,119 @@ Route::get('/member/katalog', function () {
     $books = \App\Models\Buku::with('kategori')->get();
     return view('books_katalog', compact('books'));
 })->middleware(['auth', 'verified'])->name('member.katalog');
+
+Route::post('/member/keranjang/tambah', function (\Illuminate\Http\Request $request) {
+    if (Auth::user()->role !== 'Member') {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    $anggota = Auth::user()->anggota;
+    if (!$anggota) {
+        return response()->json(['error' => 'Profil anggota tidak ditemukan'], 404);
+    }
+    $sudahAda = \App\Models\Keranjang::where('anggota_id', $anggota->id)
+                ->where('buku_id', $request->buku_id)->exists();
+    if ($sudahAda) {
+        return response()->json(['error' => 'Buku sudah ada di keranjang'], 409);
+    }
+    $buku = \App\Models\Buku::findOrFail($request->buku_id);
+    if ($buku->stok_tersedia <= 0) {
+        return response()->json(['error' => 'Stok buku habis'], 400);
+    }
+    \App\Models\Keranjang::create([
+        'anggota_id' => $anggota->id,
+        'buku_id'    => $request->buku_id,
+    ]);
+    $jumlah = \App\Models\Keranjang::where('anggota_id', $anggota->id)->count();
+    return response()->json(['success' => true, 'jumlah' => $jumlah]);
+})->middleware(['auth', 'verified'])->name('member.keranjang.tambah');
+
+Route::delete('/member/keranjang/{id}', function ($id) {
+    if (Auth::user()->role !== 'Member') {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    $anggota = Auth::user()->anggota;
+    \App\Models\Keranjang::where('id', $id)->where('anggota_id', $anggota->id)->delete();
+    return redirect()->route('member.keranjang')->with('success', 'Buku dihapus dari keranjang');
+})->middleware(['auth', 'verified'])->name('member.keranjang.hapus');
+
+Route::post('/member/keranjang/booking', function (\Illuminate\Http\Request $request) {
+    if (Auth::user()->role !== 'Member') {
+        return redirect()->route('dashboard');
+    }
+    $anggota   = Auth::user()->anggota;
+    $keranjang = \App\Models\Keranjang::where('anggota_id', $anggota->id)->with('buku')->get();
+
+    if ($keranjang->isEmpty()) {
+        return redirect()->route('member.keranjang')->with('error', 'Keranjang kosong!');
+    }
+
+    $kodeOtp    = strtoupper(\Illuminate\Support\Str::random(6));
+    $peminjaman = \App\Models\Peminjam::create([
+        'anggota_id'       => $anggota->id,
+        'kode_otp'         => $kodeOtp,
+        'waktu_booking'    => now(),
+        'otp_expired_at'   => now()->addHours(24),
+        'status_transaksi' => 'Menunggu OTP',
+        'total_denda'      => 0,
+    ]);
+
+    foreach ($keranjang as $item) {
+        \App\Models\DetailPeminjaman::create([
+            'peminjaman_id' => $peminjaman->id,
+            'buku_id'       => $item->buku_id,
+            'jumlah'        => 1,
+        ]);
+        $item->buku->decrement('stok_tersedia');
+    }
+
+    \App\Models\Keranjang::where('anggota_id', $anggota->id)->delete();
+
+    return redirect()->route('member.peminjaman.otp', ['id' => $peminjaman->id]);
+
+})->middleware(['auth', 'verified'])->name('member.keranjang.booking');
+
+Route::get('/member/keranjang', function () {
+    if (Auth::user()->role !== 'Member') {
+        return redirect()->route('dashboard');
+    }
+    $anggota   = Auth::user()->anggota;
+    $keranjang = $anggota
+        ? \App\Models\Keranjang::where('anggota_id', $anggota->id)->with('buku')->get()
+        : collect();
+    return view('keranjang', compact('keranjang'));
+})->middleware(['auth', 'verified'])->name('member.keranjang');
+
+Route::get('/member/peminjaman', function () {
+    if (Auth::user()->role !== 'Member') {
+        return redirect()->route('dashboard');
+    }
+    $anggota    = Auth::user()->anggota;
+    $peminjaman = $anggota
+        ? \App\Models\Peminjam::where('anggota_id', $anggota->id)
+            ->with(['detailPeminjaman.buku'])
+            ->latest('waktu_booking')->get()
+        : collect();
+    return view('peminjaman', compact('peminjaman'));
+})->middleware(['auth', 'verified'])->name('member.peminjaman');
+
+Route::delete('/member/peminjaman/{id}/batal', function ($id) {
+    if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
+
+    $anggota    = Auth::user()->anggota;
+    $peminjaman = \App\Models\Peminjam::where('id', $id)
+                    ->where('anggota_id', $anggota->id)
+                    ->where('status_transaksi', 'Menunggu OTP') // hanya bisa batal kalau belum diproses
+                    ->firstOrFail();
+
+    // Kembalikan stok buku
+    foreach ($peminjaman->detailPeminjaman as $detail) {
+        if ($detail->buku) $detail->buku->increment('stok_tersedia');
+    }
+
+    $peminjaman->update(['status_transaksi' => 'Batal']);
+
+    return redirect()->route('member.peminjaman')->with('success', 'Booking berhasil dibatalkan.');
+})->middleware(['auth', 'verified'])->name('member.peminjaman.batal');
 
 Route::get('/member/riwayat', function () {
     if (Auth::user()->role !== 'Member') {
@@ -339,131 +427,132 @@ Route::get('/member/riwayat', function () {
     return view('riwayat', compact('riwayat'));
 })->middleware(['auth', 'verified'])->name('member.riwayat');
 
-// Rute Profil (Tempat user melengkapi data, tidak dikunci KYC)
 Route::get('/member/profil', function () {
     if (Auth::user()->role !== 'Member') {
         return redirect()->route('dashboard');
     }
-    return view('profil'); 
+    return view('profil');
 })->middleware(['auth', 'verified'])->name('member.profil');
 
-// Rute untuk memproses form Simpan Perubahan Profil
-Route::patch('/member/profil/update', [App\Http\Controllers\ProfileController::class, 'updateProfilMember'])
-    ->middleware(['auth', 'verified'])
-    ->name('member.profil.update');
+// Update profil member
+Route::post('/member/profil/update', function (\Illuminate\Http\Request $request) {
+    if (Auth::user()->role !== 'Member') {
+        return redirect()->route('dashboard');
+    }
 
+    $request->validate([
+        'nama_lengkap' => 'required|string|max:255',
+        'no_hp'        => 'nullable|string|max:15',
+        'alamat'       => 'nullable|string',
+        'nik'          => 'nullable|string|max:16|unique:anggota,nik,' . Auth::user()->anggota?->id,
+        'foto_profil'  => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
 
-// ============================================
-// AREA TRANSAKSI (Dikunci oleh Satpam KYC / CekKelengkapanData)
-// ============================================
-
-Route::middleware([
-    'auth', 
-    'verified', 
-    \App\Http\Middleware\CekKelengkapanData::class
-])->group(function () {
-
-    // 1. Tampilan Keranjang
-    Route::get('/member/keranjang', function () {
-        if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
-        $anggota   = Auth::user()->anggota;
-        $keranjang = $anggota
-            ? \App\Models\Keranjang::where('anggota_id', $anggota->id)->with('buku')->get()
-            : collect();
-        return view('keranjang', compact('keranjang'));
-    })->name('member.keranjang');
-
-    // 2. Tambah Buku ke Keranjang
-    Route::post('/member/keranjang/tambah', function (\Illuminate\Http\Request $request) {
-        if (Auth::user()->role !== 'Member') return response()->json(['error' => 'Unauthorized'], 403);
-        $anggota = Auth::user()->anggota;
-        if (!$anggota) return response()->json(['error' => 'Profil anggota tidak ditemukan'], 404);
-        
-        $sudahAda = \App\Models\Keranjang::where('anggota_id', $anggota->id)
-                    ->where('buku_id', $request->buku_id)->exists();
-        if ($sudahAda) return response()->json(['error' => 'Buku sudah ada di keranjang'], 409);
-        
-        $buku = \App\Models\Buku::findOrFail($request->buku_id);
-        if ($buku->stok_tersedia <= 0) return response()->json(['error' => 'Stok buku habis'], 400);
-        
-        \App\Models\Keranjang::create([
-            'anggota_id' => $anggota->id,
-            'buku_id'    => $request->buku_id,
-        ]);
-        
-        $jumlah = \App\Models\Keranjang::where('anggota_id', $anggota->id)->count();
-        return response()->json(['success' => true, 'jumlah' => $jumlah]);
-    })->name('member.keranjang.tambah');
-
-    // 3. Hapus Buku dari Keranjang
-    Route::delete('/member/keranjang/{id}', function ($id) {
-        if (Auth::user()->role !== 'Member') return response()->json(['error' => 'Unauthorized'], 403);
-        $anggota = Auth::user()->anggota;
-        \App\Models\Keranjang::where('id', $id)->where('anggota_id', $anggota->id)->delete();
-        return redirect()->route('member.keranjang')->with('success', 'Buku dihapus dari keranjang');
-    })->name('member.keranjang.hapus');
-
-    // 4. Proses Booking / Checkout
-    Route::post('/member/keranjang/booking', function (\Illuminate\Http\Request $request) {
-        if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
-        
-        $anggota   = Auth::user()->anggota;
-        $keranjang = \App\Models\Keranjang::where('anggota_id', $anggota->id)->with('buku')->get();
-
-        if ($keranjang->isEmpty()) {
-            return redirect()->route('member.keranjang')->with('error', 'Keranjang kosong!');
+    // Handle upload foto profil
+    $fotoProfil = Auth::user()->anggota?->foto_profil;
+    if ($request->hasFile('foto_profil')) {
+        if ($fotoProfil) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($fotoProfil);
         }
+        $fotoProfil = $request->file('foto_profil')->store('foto_profil', 'public');
+    }
 
-        $kodeOtp    = strtoupper(\Illuminate\Support\Str::random(6));
-        $peminjaman = \App\Models\Peminjam::create([
-            'anggota_id'       => $anggota->id,
-            'kode_otp'         => $kodeOtp,
-            'waktu_booking'    => now(),
-            'otp_expired_at'   => now()->addHours(24),
-            'status_transaksi' => 'Menunggu OTP',
-            'total_denda'      => 0,
-        ]);
-
-        foreach ($keranjang as $item) {
-            \App\Models\DetailPeminjaman::create([
-                'peminjaman_id' => $peminjaman->id,
-                'buku_id'       => $item->buku_id,
-                'jumlah'        => 1,
-            ]);
-            $item->buku->decrement('stok_tersedia');
+    // Handle upload dokumen identitas
+    $dokumenIdentitas = Auth::user()->anggota?->dokumen_identitas;
+    $ubahStatusVerif  = false;
+    if ($request->hasFile('dokumen_identitas')) {
+        if ($dokumenIdentitas) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($dokumenIdentitas);
         }
+        $dokumenIdentitas = $request->file('dokumen_identitas')
+                            ->store('dokumen_identitas', 'public');
+        $ubahStatusVerif = true; // ✅ hanya ubah status kalau dokumen baru diupload
+    }
 
-        \App\Models\Keranjang::where('anggota_id', $anggota->id)->delete();
-        return redirect()->route('member.peminjaman.otp', ['id' => $peminjaman->id]);
+    $anggota = Auth::user()->anggota;
 
-    })->name('member.keranjang.booking');
+    // Status hanya Pending kalau ada dokumen baru, selain itu status tetap
+    $statusBaru = $ubahStatusVerif
+        ? 'Pending'
+        : ($anggota?->status_verifikasi ?? 'Incomplete');
 
-    // 5. Tampilan Peminjaman Saya (Tadinya error karena belum tergabung)
-    Route::get('/member/peminjaman', function () {
-        if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
-        
-        $anggota    = Auth::user()->anggota;
-        $peminjaman = $anggota
-            ? \App\Models\Peminjam::where('anggota_id', $anggota->id)
-                ->with(['detailPeminjaman.buku'])
-                ->latest('waktu_booking')->get()
-            : collect();
-        return view('peminjaman', compact('peminjaman')); // Perhatikan view ini disesuaikan ke 'peminjaman_saya'
-    })->name('member.peminjaman');
+    if ($anggota) {
+        $anggota->update([
+            'nama_lengkap'      => $request->nama_lengkap,
+            'no_hp'             => $request->no_hp,
+            'alamat'            => $request->alamat,
+            'nik'               => $request->nik,
+            'foto_profil'       => $fotoProfil,
+            'dokumen_identitas' => $dokumenIdentitas,
+            'status_verifikasi' => $statusBaru,
+        ]);
+    } else {
+        \App\Models\Anggota::create([
+            'user_id'           => Auth::user()->id,
+            'nama_lengkap'      => $request->nama_lengkap,
+            'no_hp'             => $request->no_hp,
+            'alamat'            => $request->alamat,
+            'nik'               => $request->nik,
+            'foto_profil'       => $fotoProfil,
+            'dokumen_identitas' => $dokumenIdentitas,
+            'status_verifikasi' => 'Pending',
+        ]);
+    }
 
-    // 6. Tampilan Sukses OTP
-    Route::get('/member/peminjaman/{id}/otp', function ($id) {
-        if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
-        
-        $anggota    = Auth::user()->anggota;
-        $peminjaman = \App\Models\Peminjam::where('id', $id)
-                        ->where('anggota_id', $anggota->id)
-                        ->with(['detailPeminjaman.buku'])
-                        ->firstOrFail();
-        return view('booking_sukses', compact('peminjaman'));
-    })->name('member.peminjaman.otp');
+    return redirect()->route('member.profil')->with('success', 'Profil berhasil diperbarui!');
 
-});
+})->middleware(['auth', 'verified'])->name('member.profil.update');
+
+//verifikasi
+Route::patch('/members/{id}/verify', function (\Illuminate\Http\Request $request, $id) {
+    if (Auth::user()->role !== 'Petugas') {
+        return redirect()->route('member.dashboard');
+    }
+    \App\Models\Anggota::findOrFail($id)->update([
+        'status_verifikasi' => $request->status_verifikasi
+    ]);
+    $pesan = $request->status_verifikasi === 'Approved'
+        ? 'Anggota berhasil diverifikasi!'
+        : 'Anggota berhasil ditolak.';
+    return redirect()->route('members.index')->with('success', $pesan);
+})->middleware(['auth', 'verified'])->name('members.verify');
+
+// Ubah password member
+Route::post('/member/profil/password', function (\Illuminate\Http\Request $request) {
+    if (Auth::user()->role !== 'Member') {
+        return redirect()->route('dashboard');
+    }
+
+    $request->validate([
+        'password_lama'         => 'required',
+        'password_baru'         => 'required|min:8|confirmed',
+        'password_baru_confirmation' => 'required',
+        'dokumen_identitas' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+    ]);
+
+    if (!\Illuminate\Support\Facades\Hash::check($request->password_lama, Auth::user()->password)) {
+        return back()->with('error_password', 'Password lama tidak sesuai!')->withInput();
+    }
+
+    Auth::user()->update([
+        'password' => \Illuminate\Support\Facades\Hash::make($request->password_baru),
+    ]);
+
+    return redirect()->route('member.profil')->with('success_password', 'Password berhasil diubah!');
+
+})->middleware(['auth', 'verified'])->name('member.profil.password');
+
+Route::get('/member/peminjaman/{id}/otp', function ($id) {
+    if (Auth::user()->role !== 'Member') {
+        return redirect()->route('dashboard');
+    }
+    $anggota    = Auth::user()->anggota;
+    $peminjaman = \App\Models\Peminjam::where('id', $id)
+                    ->where('anggota_id', $anggota->id)
+                    ->with(['detailPeminjaman.buku'])
+                    ->firstOrFail();
+    return view('booking_sukses', compact('peminjaman'));
+})->middleware(['auth', 'verified'])->name('member.peminjaman.otp');
 
 // ============================================
 // ROUTE PROFIL BAWAAN BREEZE
