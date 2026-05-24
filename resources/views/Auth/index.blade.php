@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login & Register - SIPUS</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="{{ asset('ui_auth/style.css') }}">
 </head>
 <body>
-
     <div class="container">
         <div class="brand-section">
             <h1 class="logo-title">SIPUS</h1>
@@ -20,7 +18,8 @@
 
         <div class="login-section">
             
-            <div class="glass-card" id="loginCard">
+            <!-- KARTU LOGIN -->
+            <div class="glass-card {{ old('form_type') == 'register' ? 'hidden' : '' }}" id="loginCard">
                 <h2 class="form-title">Login</h2>
                 
                 <div class="welcome-text">
@@ -28,18 +27,19 @@
                     <p>The Digital Library Information System</p>
                 </div>
 
-                <form action="{{ route('login.post') }}" method="POST">
+                <form action="{{ route('login') }}" method="POST">
                     @csrf
+                    <input type="hidden" name="form_type" value="login">
 
-                    @error('email')
+                    @if ($errors->any() && old('form_type') !== 'register')
                         <div style="color: #ff5f5f; font-size: 0.85rem; margin-bottom: 15px; text-align: center; background: rgba(255,0,0,0.1); padding: 10px; border-radius: 10px;">
-                            {{ $message }}
+                            {{ $errors->first() }}
                         </div>
-                    @enderror
+                    @endif
 
                     <div class="input-group">
                         <img src="{{ asset('ui_auth/email.svg') }}" alt="Email Icon" class="input-icon">
-                        <input type="email" name="email" value="{{ old('email') }}" placeholder="Email" required>
+                        <input type="email" name="email" value="{{ old('email') }}" placeholder="Email" required autofocus>
                     </div>
 
                     <div class="input-group">
@@ -60,7 +60,6 @@
 
                 <div class="card-footer-left">
                     <p><i>Forgot your password?</i> <strong>Contact the library administrator.</strong></p>
-                    <p><i>Need help?</i> <strong>Click here</strong> or email us at <strong>admin@sipus.id</strong></p>
                 </div>
                 
                 <div class="card-footer-center">
@@ -68,7 +67,8 @@
                 </div>
             </div>
 
-            <div class="glass-card hidden" id="registerCard">
+            <!-- KARTU REGISTER -->
+            <div class="glass-card {{ old('form_type') == 'register' ? '' : 'hidden' }}" id="registerCard">
                 <h2 class="form-title register-title">Create An Account</h2>
                 
                 <div class="welcome-text">
@@ -76,24 +76,38 @@
                     <p>The Digital Library Information System</p>
                 </div>
 
-                <form action="#">
+                <form action="{{ route('register') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="form_type" value="register">
+
+                    @if ($errors->any() && old('form_type') == 'register')
+                        <div style="color: #ff5f5f; font-size: 0.85rem; margin-bottom: 15px; text-align: center; background: rgba(255,0,0,0.1); padding: 10px; border-radius: 10px;">
+                            {{ $errors->first() }}
+                        </div>
+                    @endif
+
                     <div class="input-row">
                         <div class="input-group">
-                            <input type="text" placeholder="First Name" class="no-icon" required>
+                            <input type="text" name="first_name" value="{{ old('first_name') }}" placeholder="First Name" class="no-icon" required>
                         </div>
                         <div class="input-group">
-                            <input type="text" placeholder="Last Name" class="no-icon" required>
+                            <input type="text" name="last_name" value="{{ old('last_name') }}" placeholder="Last Name" class="no-icon" required>
                         </div>
                     </div>
 
                     <div class="input-group">
                         <img src="{{ asset('ui_auth/email.svg') }}" alt="Email Icon" class="input-icon">
-                        <input type="email" placeholder="Email" required>
+                        <input type="email" name="email" value="{{ old('email') }}" placeholder="Email" required>
+                    </div>
+
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <img src="{{ asset('ui_auth/gembok.svg') }}" alt="Password Icon" class="input-icon">
+                        <input type="password" name="password" placeholder="Create Password" required>
                     </div>
 
                     <div class="input-group">
                         <img src="{{ asset('ui_auth/gembok.svg') }}" alt="Password Icon" class="input-icon">
-                        <input type="password" placeholder="Create Password" required>
+                        <input type="password" name="password_confirmation" placeholder="Confirm Password" required>
                     </div>
 
                     <div class="remember-me">
@@ -107,7 +121,7 @@
                     <button type="submit" class="login-btn">Create Account</button>
                 </form>
                 
-                <div class="card-footer-center" style="margin-top: 45px;">
+                <div class="card-footer-center" style="margin-top: 25px;">
                     <p>Already have an account? <a href="#" id="btnShowLogin">Log In</a></p>
                 </div>
             </div>
