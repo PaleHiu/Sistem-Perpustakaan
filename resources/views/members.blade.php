@@ -83,6 +83,7 @@
                 <thead>
                     <tr>
                         <th>No</th>
+                        <th>Foto</th>
                         <th>Nama Lengkap</th>
                         <th>Email</th>
                         <th>NIK</th>
@@ -97,6 +98,16 @@
                     <tr data-nama="{{ strtolower($member->nama_lengkap) }}"
                         data-status="{{ $member->status_verifikasi ?? 'Incomplete' }}">
                         <td>{{ $index + 1 }}</td>
+                        <td>
+                            @if($member->foto_profil)
+                                <img src="{{ asset('storage/' . $member->foto_profil) }}"
+                                    style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
+                            @else
+                                <div style="width:38px;height:38px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fa-solid fa-user" style="color:#a0aec0;font-size:14px;"></i>
+                                </div>
+                            @endif
+                        </td>
                         <td><strong class="text-dark">{{ $member->nama_lengkap }}</strong></td>
                         <td class="text-muted">{{ $member->user->email ?? '-' }}</td>
                         <td class="text-muted">{{ $member->nik ?? '-' }}</td>
@@ -116,21 +127,22 @@
                         </td>
                         <td class="text-center">
                             <a href="#" class="action-icon icon-detail" title="Detail"
-                               onclick="bukaModalAnggota(
-                                   '{{ addslashes($member->nama_lengkap) }}',
-                                   'MB-{{ str_pad($member->id, 8, '0', STR_PAD_LEFT) }}',
-                                   '{{ addslashes($member->user->email ?? '-') }}',
-                                   '{{ $member->no_hp ?? '-' }}',
-                                   '{{ addslashes($member->alamat ?? '-') }}',
-                                   '{{ $member->status_verifikasi ?? 'Incomplete' }}',
-                                   {{ $member->id }},
-                                   '{{ $member->dokumen_identitas ? asset('storage/' . $member->dokumen_identitas) : '' }}'
-                               )">
+                                onclick="bukaModalAnggota(
+                                '{{ addslashes($member->nama_lengkap) }}',
+                                'MB-{{ str_pad($member->id, 8, '0', STR_PAD_LEFT) }}',
+                                '{{ addslashes($member->user->email ?? '-') }}',
+                                '{{ $member->no_hp ?? '-' }}',
+                                '{{ addslashes($member->alamat ?? '-') }}',
+                                '{{ $member->status_verifikasi ?? 'Incomplete' }}',
+                                {{ $member->id }},
+                                '{{ $member->dokumen_identitas ? asset('storage/' . $member->dokumen_identitas) : '' }}',
+                                '{{ $member->foto_profil ? asset('storage/' . $member->foto_profil) : '' }}'
+                            )">
                                 <i class="fa-solid fa-eye"></i>
                             </a>
                             <a href="#" class="action-icon" title="Hapus"
-                               style="color: #e53e3e; margin-left: 8px;"
-                               onclick="konfirmasiHapus({{ $member->id }}, '{{ addslashes($member->nama_lengkap) }}')">
+                                style="color: #e53e3e; margin-left: 8px;"
+                                onclick="konfirmasiHapus({{ $member->id }}, '{{ addslashes($member->nama_lengkap) }}')">
                                 <i class="fa-solid fa-trash"></i>
                             </a>
                         </td>
@@ -163,16 +175,17 @@
     @method('DELETE')
 </form>
 
-{{-- Form Verifikasi Tersembunyi --}}
+{{-- Form Verifikasi --}}
 <form id="form-verifikasi" method="POST" style="display: none;">
     @csrf
-    @method('PATCH') <input type="hidden" name="status_verifikasi" id="input-status-verifikasi">
+    @method('PATCH') 
+    <input type="hidden" name="status_verifikasi" id="input-status-verifikasi">
 </form>
 
 {{-- ===================== MODAL DETAIL ANGGOTA ===================== --}}
 <div id="modal-anggota"
-     onclick="tutupModalAnggota(event)"
-     style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 999; justify-content: center; align-items: center; padding: 20px;">
+    onclick="tutupModalAnggota(event)"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 999; justify-content: center; align-items: center; padding: 20px;">
 
     <div style="background: white; border-radius: 16px; width: 100%; max-width: 600px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,0.15);">
 
@@ -188,8 +201,9 @@
 
             {{-- KIRI --}}
             <div style="width: 130px; flex-shrink: 0; text-align: center;">
-                <div style="width: 90px; height: 90px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                    <i class="fa-solid fa-user" style="font-size: 32px; color: #a0aec0;"></i>
+                <div id="modal-foto-profil"
+                    style="width:90px;height:90px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;overflow:hidden;">
+                    <i class="fa-solid fa-user" style="font-size:32px;color:#a0aec0;"></i>
                 </div>
                 <span id="modal-badge" style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-bottom: 6px;"></span>
                 <p id="modal-badge-label" style="font-size: 11px; color: #718096;"></p>
@@ -251,7 +265,7 @@
 </div>
 
 <script>
-function bukaModalAnggota(nama, id, email, hp, alamat, status, memberId, dokumenUrl) {
+function bukaModalAnggota(nama, id, email, hp, alamat, status, memberId, dokumenUrl, fotoUrl) {
     document.getElementById('modal-nama').textContent  = nama;
     document.getElementById('modal-id').textContent    = 'ID: ' + id;
     document.getElementById('modal-email').textContent = email;
@@ -272,6 +286,14 @@ function bukaModalAnggota(nama, id, email, hp, alamat, status, memberId, dokumen
     badge.style.background = s.bg;
     badge.style.color      = s.color;
     label.textContent      = s.label;
+
+    const fotoEl = document.getElementById('modal-foto-profil');
+    if (fotoUrl && fotoUrl !== '') {
+        fotoEl.innerHTML = '<img src="' + fotoUrl + '" style="width:100%;height:100%;object-fit:cover;">';
+    } else {
+        fotoEl.innerHTML = '<i class="fa-solid fa-user" style="font-size:32px;color:#a0aec0;"></i>';
+        fotoEl.style.background = '#e2e8f0';
+    }
 
     // Set Preview Gambar Dokumen
     const docContainer = document.getElementById('modal-dokumen-container');

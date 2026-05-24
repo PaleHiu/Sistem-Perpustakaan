@@ -15,9 +15,16 @@
 
     @forelse($keranjang as $item)
     <div style="display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #edf2f7; align-items: flex-start;">
-        <div style="width: 70px; height: 100px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 24px;"></i>
-        </div>
+        @if($item->buku->cover)
+            <div style="width: 70px; height: 100px; border-radius: 8px; overflow: hidden; flex-shrink: 0;">
+                <img src="{{ asset('storage/' . $item->buku->cover) }}"
+                    style="width:100%;height:100%;object-fit:cover;">
+            </div>
+        @else
+            <div style="width: 70px; height: 100px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 24px;"></i>
+            </div>
+        @endif
         <div style="flex: 1;">
             <h4 style="margin: 0 0 5px; font-size: 15px; color: #2d3748;">{{ $item->buku->judul }}</h4>
             <p style="margin: 0 0 8px; font-size: 13px; color: #718096;">{{ $item->buku->penulis }}</p>
@@ -165,7 +172,7 @@
 
     </div>
 
-    {{-- ===== KOLOM KANAN: Ringkasan Peminjaman ===== --}}
+    {{-- KOLOM KANAN: Ringkasan Peminjaman --}}
     <div style="flex: 1; background: white; border-radius: 15px; padding: 25px; border: 1px solid #edf2f7;">
 
         <h3 style="margin: 0 0 20px; font-size: 18px; color: #2d3748;">Ringkasan Peminjaman</h3>
