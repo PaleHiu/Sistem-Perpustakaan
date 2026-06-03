@@ -18,6 +18,11 @@
     <i class="fa-solid fa-circle-check"></i> {{ session('success') }}
 </div>
 @endif
+@if(session('warning'))
+<div style="background:#fffbeb;border:1px solid #f6ad55;border-radius:10px;padding:12px 20px;margin-bottom:20px;color:#d97706;display:flex;align-items:center;gap:10px;">
+    <i class="fa-solid fa-triangle-exclamation"></i> {{ session('warning') }}
+</div>
+@endif
 @if(session('success_password'))
 <div style="background:#f0fff4;border:1px solid #c6f6d5;border-radius:10px;padding:12px 20px;margin-bottom:20px;color:#38a169;display:flex;align-items:center;gap:10px;">
     <i class="fa-solid fa-circle-check"></i> {{ session('success_password') }}
@@ -35,10 +40,11 @@
 </div>
 @endif
 
+{{-- WRAPPER DUA KOLOM --}}
 <div style="display:flex;gap:25px;align-items:flex-start;">
 
-    {{-- KOLOM KIRI --}}
-    <div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:20px;">
+    {{-- ===================== KOLOM KIRI ===================== --}}
+    <div style="width:260px;flex-shrink:0;">
 
         {{-- KARTU PROFIL --}}
         <div style="background:white;border-radius:15px;padding:25px 20px;border:1px solid #edf2f7;text-align:center;">
@@ -47,14 +53,14 @@
             <div style="position:relative;width:80px;margin:0 auto 15px;">
                 @if($anggota?->foto_profil)
                     <img src="{{ asset('storage/' . $anggota->foto_profil) }}"
-                        style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
+                         style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
                 @else
                     <div style="width:80px;height:80px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:white;">
                         {{ $inisial ?: 'U' }}
                     </div>
                 @endif
                 <label for="input-foto-profil"
-                    style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
+                       style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
                     <i class="fa-solid fa-camera" style="font-size:11px;color:white;"></i>
                 </label>
             </div>
@@ -96,20 +102,14 @@
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> Log Out
                 </button>
             </form>
-        </div>
 
-        {{-- STATUS KEANGGOTAAN --}}
-        <div style="background:white;border-radius:15px;padding:20px;border:1px solid #edf2f7;">
-            <h4 style="font-size:15px;font-weight:700;color:#2d3748;margin-bottom:12px;">Status Keanggotaan</h4>
-            <div style="background:#edf2f7;border-radius:10px;height:8px;margin-bottom:10px;overflow:hidden;">
-                <div style="width:60%;height:100%;background:#1fcf8e;border-radius:10px;"></div>
-            </div>
-            <p style="font-size:12px;color:#718096;">250 poin lagi untuk menjadi <strong style="color:#d97706;">Gold Member</strong></p>
         </div>
+        {{-- AKHIR KARTU PROFIL --}}
 
     </div>
+    {{-- AKHIR KOLOM KIRI --}}
 
-    {{-- KOLOM KANAN --}}
+    {{-- ===================== KOLOM KANAN ===================== --}}
     <div style="flex:1;background:white;border-radius:15px;padding:25px;border:1px solid #edf2f7;">
 
         {{-- TABS --}}
@@ -126,24 +126,22 @@
 
         {{-- TAB: INFORMASI PRIBADI --}}
         <div id="content-info">
-
-            {{-- Form gabung: foto profil + data diri + dokumen identitas --}}
             <form method="POST" action="{{ route('member.profil.update') }}" enctype="multipart/form-data">
                 @csrf
 
-                {{-- Input foto profil tersembunyi — submit otomatis saat foto dipilih --}}
+                {{-- Input foto profil tersembunyi --}}
                 <input type="file" id="input-foto-profil" name="foto_profil"
-                    accept="image/jpg,image/jpeg,image/png"
-                    style="display:none;"
-                    onchange="this.form.submit()">
+                       accept="image/jpg,image/jpeg,image/png"
+                       style="display:none;"
+                       onchange="this.form.submit()">
 
                 {{-- Nama Lengkap --}}
                 <div style="margin-bottom:20px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Nama Lengkap <span style="color:#e53e3e;">*</span></label>
                     <input type="text" name="nama_lengkap"
-                        value="{{ old('nama_lengkap', $anggota?->nama_lengkap ?? '') }}"
-                        required
-                        style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;outline:none;background:#fafafa;">
+                           value="{{ old('nama_lengkap', $anggota?->nama_lengkap ?? '') }}"
+                           required
+                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;outline:none;background:#fafafa;">
                 </div>
 
                 {{-- NIK & No HP --}}
@@ -151,16 +149,16 @@
                     <div style="flex:1;">
                         <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">NIK</label>
                         <input type="text" name="nik" maxlength="16"
-                            value="{{ old('nik', $anggota?->nik ?? '') }}"
-                            placeholder="16 digit NIK"
-                            style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                               value="{{ old('nik', $anggota?->nik ?? '') }}"
+                               placeholder="16 digit NIK"
+                               style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                     </div>
                     <div style="flex:1;">
                         <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">No. HP</label>
                         <input type="text" name="no_hp" maxlength="15"
-                            value="{{ old('no_hp', $anggota?->no_hp ?? '') }}"
-                            placeholder="08xxxxxxxxxx"
-                            style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                               value="{{ old('no_hp', $anggota?->no_hp ?? '') }}"
+                               placeholder="08xxxxxxxxxx"
+                               style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                     </div>
                 </div>
 
@@ -168,8 +166,8 @@
                 <div style="margin-bottom:25px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Alamat Domisili</label>
                     <textarea name="alamat" rows="3"
-                            placeholder="Masukkan alamat lengkap..."
-                            style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;resize:none;font-family:inherit;">{{ old('alamat', $anggota?->alamat ?? '') }}</textarea>
+                              placeholder="Masukkan alamat lengkap..."
+                              style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;resize:none;font-family:inherit;">{{ old('alamat', $anggota?->alamat ?? '') }}</textarea>
                 </div>
 
                 <hr style="border:none;border-top:1px solid #edf2f7;margin-bottom:25px;">
@@ -177,7 +175,6 @@
                 {{-- DOKUMEN IDENTITAS --}}
                 <h4 style="font-size:15px;font-weight:700;color:#2d3748;margin-bottom:16px;">Dokumen Identitas</h4>
 
-                {{-- Info status verifikasi --}}
                 @if($statusVerif === 'Pending')
                 <div style="background:#fffbeb;border:1px solid #f6ad55;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
                     <i class="fa-solid fa-clock" style="color:#d97706;flex-shrink:0;margin-top:2px;"></i>
@@ -200,16 +197,13 @@
                 </div>
                 @endif
 
-                {{-- Preview + Upload dokumen --}}
                 <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:25px;">
-
-                    {{-- Preview dokumen --}}
                     <div style="flex:1;min-width:200px;max-width:280px;">
                         @if($anggota?->dokumen_identitas)
                             <a href="{{ asset('storage/' . $anggota->dokumen_identitas) }}" target="_blank">
                                 <img src="{{ asset('storage/' . $anggota->dokumen_identitas) }}"
-                                    alt="Dokumen Identitas"
-                                    style="width:100%;border-radius:10px;border:2px solid #1fcf8e;object-fit:cover;">
+                                     alt="Dokumen Identitas"
+                                     style="width:100%;border-radius:10px;border:2px solid #1fcf8e;object-fit:cover;">
                             </a>
                         @else
                             <div style="width:100%;height:130px;border-radius:10px;border:2px dashed #cbd5e0;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
@@ -218,29 +212,26 @@
                             </div>
                         @endif
                     </div>
-
-                    {{-- Input upload --}}
                     <div style="flex:1;min-width:200px;">
                         <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">
                             {{ $anggota?->dokumen_identitas ? 'Ganti Dokumen' : 'Unggah Dokumen' }}
                         </label>
                         <input type="file" name="dokumen_identitas"
-                            accept=".jpg,.jpeg,.png,.pdf"
-                            style="width:100%;padding:10px;border:1px dashed #cbd5e0;border-radius:8px;font-size:13px;background:#fafafa;cursor:pointer;">
+                               accept=".jpg,.jpeg,.png,.pdf"
+                               style="width:100%;padding:10px;border:1px dashed #cbd5e0;border-radius:8px;font-size:13px;background:#fafafa;cursor:pointer;">
                         <p style="font-size:11px;color:#a0aec0;margin-top:6px;">Format: JPG, PNG, PDF. Maks 2MB.</p>
                     </div>
                 </div>
 
-                {{-- Tombol simpan --}}
                 <div style="display:flex;justify-content:flex-end;padding-top:20px;border-top:1px solid #edf2f7;">
                     <button type="submit"
                             style="padding:13px 35px;background:#1fcf8e;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;">
                         Simpan Perubahan
                     </button>
                 </div>
-
             </form>
         </div>
+        {{-- AKHIR TAB INFO --}}
 
         {{-- TAB: KEAMANAN --}}
         <div id="content-keamanan" style="display:none;">
@@ -249,28 +240,24 @@
 
             <form method="POST" action="{{ route('member.profil.password') }}">
                 @csrf
-
                 <div style="margin-bottom:20px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Password Saat Ini <span style="color:#e53e3e;">*</span></label>
                     <input type="password" name="password_lama" required
-                        placeholder="Masukkan password saat ini"
-                        style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                           placeholder="Masukkan password saat ini"
+                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                 </div>
-
                 <div style="margin-bottom:20px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Password Baru <span style="color:#e53e3e;">*</span></label>
                     <input type="password" name="password_baru" required minlength="8"
-                        placeholder="Minimal 8 karakter"
-                        style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                           placeholder="Minimal 8 karakter"
+                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                 </div>
-
                 <div style="margin-bottom:30px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Konfirmasi Password Baru <span style="color:#e53e3e;">*</span></label>
                     <input type="password" name="password_baru_confirmation" required
-                        placeholder="Ulangi password baru"
-                        style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                           placeholder="Ulangi password baru"
+                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                 </div>
-
                 <div style="display:flex;justify-content:flex-end;">
                     <button type="submit"
                             style="padding:13px 35px;background:#3182ce;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;">
@@ -279,11 +266,14 @@
                 </div>
             </form>
         </div>
+        {{-- AKHIR TAB KEAMANAN --}}
 
     </div>
-</div>
+    {{-- AKHIR KOLOM KANAN --}}
 
-{{-- JAVASCRIPT --}}
+</div>
+{{-- AKHIR WRAPPER --}}
+
 <script>
 function switchTab(tab) {
     ['info', 'keamanan'].forEach(t => {
