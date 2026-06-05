@@ -17,13 +17,23 @@
     <h1 style="font-size: 22px; font-weight: 800; color: #1fcf8e; text-align: center; margin-bottom: 6px;">Booking Berhasil!</h1>
     <p style="font-size: 13px; color: #718096; text-align: center; margin-bottom: 22px;">Tunjukkan kode OTP berikut ke petugas perpustakaan</p>
 
-    {{-- DAFTAR BUKU DARI DATABASE --}}
+    {{-- ===================== DAFTAR BUKU ===================== --}}
     <div style="width: 100%; border: 1px solid #edf2f7; border-radius: 14px; overflow: hidden; margin-bottom: 26px;">
         @foreach($peminjaman->detailPeminjaman as $detail)
         <div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; {{ !$loop->last ? 'border-bottom: 1px solid #edf2f7;' : '' }}">
-            <div style="width: 44px; height: 56px; min-width: 44px; border-radius: 6px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.8); font-size: 16px;"></i>
-            </div>
+
+            {{-- Cover buku --}}
+            @if($detail->buku?->cover)
+                <div style="width: 44px; height: 56px; min-width: 44px; border-radius: 6px; overflow: hidden; flex-shrink: 0;">
+                    <img src="{{ asset('storage/' . $detail->buku->cover) }}"
+                        style="width:100%;height:100%;object-fit:cover;">
+                </div>
+            @else
+                <div style="width: 44px; height: 56px; min-width: 44px; border-radius: 6px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.8); font-size: 16px;"></i>
+                </div>
+            @endif
+
             <div style="flex: 1; min-width: 0;">
                 <p style="font-size: 13px; font-weight: 700; color: #1a202c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     {{ $detail->buku?->judul ?? '-' }}
@@ -42,7 +52,7 @@
         @endforeach
     </div>
 
-    {{-- OTP DARI DATABASE --}}
+    {{-- OTP --}}
     <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.10em; color: #a0aec0; text-align: center; margin-bottom: 10px;">KODE OTP KAMU</p>
     <div style="width: 100%; background: #e8f5f0; border: 2px solid #c8e9dc; border-radius: 14px; display: flex; align-items: center; justify-content: center; padding: 22px 20px; margin-bottom: 14px;">
         <span id="otpCode" style="font-size: 46px; font-weight: 800; color: #1fcf8e; letter-spacing: 0.18em; user-select: all; font-family: monospace;">
@@ -56,7 +66,7 @@
         <span id="btnCopyText">Salin Kode</span>
     </button>
 
-    {{-- TIMER DARI DATABASE --}}
+    {{-- TIMER --}}
     @php
         $sisaDetik = max(0, (int) now()->diffInSeconds(\Carbon\Carbon::parse($peminjaman->otp_expired_at), false));
     @endphp
@@ -98,7 +108,7 @@
     </div>
 
     <a href="{{ route('member.peminjaman') }}"
-       style="display: block; width: 100%; background: #1fcf8e; color: white; font-size: 15px; font-weight: 700; text-align: center; border-radius: 99px; padding: 16px 20px; text-decoration: none; box-shadow: 0 6px 20px rgba(31,207,142,0.30);">
+        style="display: block; width: 100%; background: #1fcf8e; color: white; font-size: 15px; font-weight: 700; text-align: center; border-radius: 99px; padding: 16px 20px; text-decoration: none; box-shadow: 0 6px 20px rgba(31,207,142,0.30);">
         Lihat Peminjaman Saya
     </a>
 
@@ -120,7 +130,7 @@ function tick() {
     totalSeconds--;
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = Math.floor(totalSeconds % 60); // tambah Math.floor di sini
+    const s = Math.floor(totalSeconds % 60);
     document.getElementById('timerJam').textContent   = pad(h);
     document.getElementById('timerMenit').textContent = pad(m);
     document.getElementById('timerDetik').textContent = pad(s);

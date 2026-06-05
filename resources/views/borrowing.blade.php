@@ -86,7 +86,7 @@
         </div>
         @endif
 
-        <!-- TABLE -->
+        <!-- ===================== TABEL BORROWING ===================== -->
         <div class="card table-wrapper">
             <table id="tabelBorrowing">
                 <thead>
@@ -118,9 +118,7 @@
                     if ($status === 'Dipinjam' && $borrow->batas_pengembalian) {
                         $batasCarbon = \Carbon\Carbon::parse($borrow->batas_pengembalian);
                         $terlambat   = now()->gt($batasCarbon);
-
                         if ($terlambat) {
-                            // ceil: 1 jam lewat = 1 hari
                             $hariTerlambat = (int) ceil($batasCarbon->floatDiffInDays(now()));
                             $dendaEstimasi = $hariTerlambat * 1000 * $borrow->detailPeminjaman->count();
                         }
@@ -133,8 +131,10 @@
                         ));
                     }
 
-                    $judulBuku  = $borrow->detailPeminjaman->first()?->buku?->judul ?? '-';
-                    $jumlahBuku = $borrow->detailPeminjaman->count();
+                    $firstDetail = $borrow->detailPeminjaman->first();
+                    $judulBuku   = $firstDetail?->buku?->judul ?? '-';
+                    $coverBuku   = $firstDetail?->buku?->cover ?? null; 
+                    $jumlahBuku  = $borrow->detailPeminjaman->count();
                 @endphp
                 <tr data-nama="{{ strtolower($borrow->anggota->nama_lengkap ?? '') }}"
                     data-status="{{ $status }}">
@@ -199,6 +199,7 @@
                         @endif
                     </td>
                     <td class="text-center">
+                        {{-- ✅ Tambah parameter coverUrl di akhir --}}
                         <a href="#" class="action-icon icon-detail" title="Detail"
                            onclick="bukaModalPeminjaman(
                                '{{ $borrow->kode_otp }}',
@@ -214,7 +215,8 @@
                                '{{ $borrow->batas_pengembalian ? \Carbon\Carbon::parse($borrow->batas_pengembalian)->format('d M Y') : '-' }}',
                                {{ $hariTerlambat }},
                                {{ $jumlahBuku }},
-                               '{{ addslashes($judulBuku) }}'
+                               '{{ addslashes($judulBuku) }}',
+                               '{{ $coverBuku ? asset('storage/' . $coverBuku) : '' }}'
                            )">
                             <i class="fa-solid fa-eye"></i> Detail
                         </a>
@@ -250,7 +252,7 @@
 
     <div style="background:white;border-radius:16px;width:100%;max-width:600px;padding:24px;box-shadow:0 12px 30px rgba(0,0,0,0.15);margin:auto;">
 
-        {{-- HEADER --}}
+        {{-- HEADER MODAL --}}
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
             <div>
                 <p id="modal-status-label" style="font-size:11px;font-weight:700;color:#1fcf8e;letter-spacing:0.08em;margin-bottom:5px;"></p>
@@ -260,7 +262,7 @@
                     style="background:none;border:none;font-size:22px;color:#a0aec0;cursor:pointer;">×</button>
         </div>
 
-        {{-- INFO CARD --}}
+        {{-- INFO CARD ANGGOTA --}}
         <div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div>
                 <p style="font-size:11px;color:#a0aec0;font-weight:600;letter-spacing:0.05em;margin-bottom:4px;">ANGGOTA</p>
@@ -281,18 +283,23 @@
             </div>
         </div>
 
-        {{-- INFO BUKU --}}
-        <div id="info-buku-section" style="background:#f0fff4;border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
-            <div style="width:44px;height:56px;background:linear-gradient(135deg,#1f3c45,#2d6a5a);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        {{-- ===================== INFO BUKU (MODAL) ===================== --}}
+        <div id="info-buku-section"
+             style="background:#f0fff4;border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+
+            {{-- ✅ Cover buku di modal: pakai id="modal-cover-borrowing" untuk diganti JS --}}
+            <div id="modal-cover-borrowing"
+                 style="width:44px;height:56px;background:linear-gradient(135deg,#1f3c45,#2d6a5a);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
                 <i class="fa-solid fa-book" style="color:rgba(255,255,255,0.7);font-size:16px;"></i>
             </div>
+
             <div>
                 <p id="modal-judul-buku" style="font-size:14px;font-weight:700;color:#1a202c;margin-bottom:3px;"></p>
                 <p id="modal-jumlah-buku" style="font-size:12px;color:#718096;"></p>
             </div>
         </div>
 
-        {{-- DENDA INFO (tampil kalau terlambat) --}}
+        {{-- DENDA INFO --}}
         <div id="denda-section" style="display:none;background:#fff5f5;border:1px solid #fed7d7;border-radius:12px;padding:16px;margin-bottom:20px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                 <i class="fa-solid fa-triangle-exclamation" style="color:#e53e3e;font-size:16px;"></i>
@@ -348,9 +355,7 @@
                     <i class="fa-solid fa-check"></i> Konfirmasi Peminjaman
                 </button>
             </form>
-            <p style="text-align:center;font-size:11px;color:#a0aec0;">
-                *Sistem akan mencatat tanggal pinjam hari ini
-            </p>
+            <p style="text-align:center;font-size:11px;color:#a0aec0;">*Sistem akan mencatat tanggal pinjam hari ini</p>
         </div>
 
         {{-- ===== SECTION: DIPINJAM → tombol kembalikan ===== --}}
@@ -362,9 +367,7 @@
                     <i class="fa-solid fa-rotate-left"></i> Proses Pengembalian Buku
                 </button>
             </form>
-            <p style="text-align:center;font-size:11px;color:#a0aec0;">
-                *Stok buku akan bertambah setelah pengembalian dikonfirmasi
-            </p>
+            <p style="text-align:center;font-size:11px;color:#a0aec0;">*Stok buku akan bertambah setelah pengembalian dikonfirmasi</p>
         </div>
 
         {{-- ===== SECTION: SELESAI / KADALUARSA ===== --}}
@@ -378,6 +381,7 @@
     </div>
 </div>
 
+{{-- ===================== JAVASCRIPT ===================== --}}
 <script>
 function tutupModal() {
     document.getElementById('modal-peminjaman').style.display = 'none';
@@ -389,7 +393,11 @@ function tutupModalPeminjaman(event) {
     if (event.target === document.getElementById('modal-peminjaman')) tutupModal();
 }
 
-function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal, denda, status, borrowId, otpSisaDetik, tglPinjam, batasKembali, hariTerlambat, jumlahBuku, judulBuku) {
+// ✅ Tambah parameter coverUrl di akhir
+function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
+                              denda, status, borrowId, otpSisaDetik,
+                              tglPinjam, batasKembali, hariTerlambat,
+                              jumlahBuku, judulBuku, coverUrl) {
 
     // Isi data dasar
     document.getElementById('modal-trx-title').textContent   = 'Detail Peminjaman #' + kodeOtp;
@@ -401,16 +409,26 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal, dend
     document.getElementById('modal-judul-buku').textContent   = judulBuku;
     document.getElementById('modal-jumlah-buku').textContent  = jumlahBuku + ' judul buku';
 
-    // Batas kembali + warna
+    // Batas kembali + warna merah kalau terlambat
     const batasEl = document.getElementById('modal-batas');
     batasEl.textContent = batasKembali !== '-' ? batasKembali : '-';
     batasEl.style.color = hariTerlambat > 0 ? '#e53e3e' : '#2d3748';
 
-    // Set action form
-    document.getElementById('form-validasi-otp').action  = '/borrowing/' + borrowId + '/validasi';
-    document.getElementById('form-kembalikan').action    = '/borrowing/' + borrowId + '/kembalikan';
+    // ✅ Update cover di modal info buku
+    const coverEl = document.getElementById('modal-cover-borrowing');
+    if (coverUrl && coverUrl !== '') {
+        coverEl.innerHTML        = '<img src="' + coverUrl + '" style="width:100%;height:100%;object-fit:cover;">';
+        coverEl.style.background = 'none';
+    } else {
+        coverEl.style.background = 'linear-gradient(135deg,#1f3c45,#2d6a5a)';
+        coverEl.innerHTML        = '<i class="fa-solid fa-book" style="color:rgba(255,255,255,0.7);font-size:16px;"></i>';
+    }
 
-    // Sembunyikan semua section
+    // Set action form
+    document.getElementById('form-validasi-otp').action = '/borrowing/' + borrowId + '/validasi';
+    document.getElementById('form-kembalikan').action   = '/borrowing/' + borrowId + '/kembalikan';
+
+    // Sembunyikan semua section dulu
     document.getElementById('otp-section').style.display        = 'none';
     document.getElementById('kembalikan-section').style.display = 'none';
     document.getElementById('btn-tutup-saja').style.display     = 'none';
@@ -426,8 +444,6 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal, dend
 
     } else if (status === 'Dipinjam' || status === 'Terlambat') {
         document.getElementById('kembalikan-section').style.display = 'block';
-
-        // Tampilkan denda kalau terlambat
         if (hariTerlambat > 0) {
             document.getElementById('denda-section').style.display     = 'block';
             document.getElementById('modal-hari-terlambat').textContent = hariTerlambat + ' hari';
@@ -455,7 +471,6 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal, dend
 function mulaiTimerOTP(detik) {
     if (window.otpInterval) clearInterval(window.otpInterval);
     const timerEl = document.getElementById('otp-timer');
-
     function tick() {
         if (detik <= 0) {
             timerEl.textContent = 'KADALUARSA';
@@ -476,14 +491,11 @@ function mulaiTimerOTP(detik) {
 }
 
 function konfirmasiOTP() {
-    const otp     = document.getElementById('input-otp-langsung').value.trim().toUpperCase();
-    const kondisi = document.querySelector('input[name="kondisi_fisik"]:checked')?.value;
-
+    const otp = document.getElementById('input-otp-langsung').value.trim().toUpperCase();
     if (otp.length < 6) {
         alert('Masukkan kode OTP lengkap (6 karakter)!');
         return;
     }
-
     document.getElementById('input-otp-hidden').value = otp;
     document.getElementById('form-validasi-otp').submit();
 }

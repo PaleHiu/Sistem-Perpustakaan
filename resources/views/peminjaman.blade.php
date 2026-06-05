@@ -9,8 +9,8 @@
     <div style="position: relative; flex: 1; min-width: 220px;">
         <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #cbd5e0; font-size: 13px;"></i>
         <input type="text" id="searchPeminjaman" oninput="filterPeminjaman()"
-               placeholder="Cari judul buku..."
-               style="width: 100%; padding: 10px 10px 10px 40px; border-radius: 20px; border: 1px solid #edf2f7; background: #f8fafc; font-size: 13px; outline: none;">
+            placeholder="Cari judul buku..."
+            style="width: 100%; padding: 10px 10px 10px 40px; border-radius: 20px; border: 1px solid #edf2f7; background: #f8fafc; font-size: 13px; outline: none;">
     </div>
     <select id="filterStatus" onchange="filterPeminjaman()"
             style="padding: 10px 16px; border-radius: 20px; border: 1px solid #edf2f7; background: #f8fafc; font-size: 13px; color: #4a5568; outline: none; cursor: pointer;">
@@ -27,7 +27,8 @@
 
 {{-- LIST PEMINJAMAN --}}
 <div id="list-peminjaman">
-@forelse($peminjaman ?? [] as $trx)
+@php $filtered = ($peminjaman ?? collect())->filter(fn($t) => $t->status_transaksi !== 'Selesai' && $t->status_transaksi !== 'Batal'); @endphp
+@forelse($filtered as $trx)
 @php
     $status     = $trx->status_transaksi;
     $otpExpired = $trx->otp_expired_at
@@ -68,9 +69,9 @@
 @endphp
 
 <div class="card-peminjaman"
-     data-status="{{ $status }}"
-     data-judul="{{ strtolower($judulBuku) }}"
-     style="background: white; border-radius: 15px; padding: 20px 25px; margin-bottom: 20px; border: 1px solid #edf2f7; {{ $borderLeft }}">
+    data-status="{{ $status }}"
+    data-judul="{{ strtolower($judulBuku) }}"
+    style="background: white; border-radius: 15px; padding: 20px 25px; margin-bottom: 20px; border: 1px solid #edf2f7; {{ $borderLeft }}">
 
     {{-- HEADER CARD --}}
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">
@@ -103,9 +104,16 @@
             {{-- Cover buku --}}
             <div style="display: flex;">
                 @foreach($trx->detailPeminjaman->take(2) as $detail)
-                <div style="width: 50px; height: 70px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 2px solid white; {{ !$loop->first ? 'margin-left: -15px;' : '' }}">
-                    <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 16px;"></i>
-                </div>
+                    @if($detail->buku?->cover)
+                        <div style="width: 50px; height: 70px; border-radius: 6px; overflow: hidden; border: 2px solid white; flex-shrink: 0; {{ !$loop->first ? 'margin-left: -15px;' : '' }}">
+                            <img src="{{ asset('storage/' . $detail->buku->cover) }}"
+                                style="width:100%;height:100%;object-fit:cover;">
+                        </div>
+                    @else
+                        <div style="width: 50px; height: 70px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 2px solid white; flex-shrink: 0; {{ !$loop->first ? 'margin-left: -15px;' : '' }}">
+                            <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 16px;"></i>
+                        </div>
+                    @endif
                 @endforeach
             </div>
             <div>
@@ -171,14 +179,24 @@
 
         @if($status === 'Menunggu OTP')
             <a href="{{ route('member.peminjaman.otp', ['id' => $trx->id]) }}"
-               style="font-size: 13px; color: #1fcf8e; text-decoration: none; font-weight: 500;">
+                style="font-size: 13px; color: #1fcf8e; text-decoration: none; font-weight: 500;">
                 Lihat OTP →
             </a>
+            {{-- Tombol batal --}}
+            <form method="POST" action="{{ route('member.peminjaman.batal', $trx->id) }}"
+                onsubmit="return confirm('Yakin ingin membatalkan booking ini? Stok buku akan dikembalikan.')">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        style="font-size: 13px; color: #e53e3e; background: none; border: 1.5px solid #e53e3e; padding: 6px 16px; border-radius: 20px; cursor: pointer;">
+                    Batalkan
+                </button>
+            </form>
         @elseif($status !== 'Selesai')
-            <span style="font-size: 13px; color: #a0aec0;">{{ strtoupper($status) }}</span>
+            <span style="font-size: 13px; color: #a0aec0;">{{ $status === 'Menunggu OTP' ? 'MENUNGGU VERIFIKASI OTP' : strtoupper($status) }}</span>
         @else
             <a href="{{ route('member.riwayat') }}"
-               style="font-size: 13px; color: #1fcf8e; text-decoration: none; font-weight: 500;">
+                style="font-size: 13px; color: #1fcf8e; text-decoration: none; font-weight: 500;">
                 Lihat Riwayat →
             </a>
         @endif

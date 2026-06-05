@@ -48,6 +48,7 @@
         $firstDetail = $trx->detailPeminjaman->first();
         $judulBuku   = $firstDetail?->buku?->judul ?? 'Buku tidak diketahui';
         $penulisBuku = $firstDetail?->buku?->penulis ?? '-';
+        $coverBuku   = $firstDetail?->buku?->cover ?? null; 
         $jumlahBuku  = $trx->detailPeminjaman->count();
 
         $tanggalPinjam  = $trx->tanggal_pinjam
@@ -59,13 +60,24 @@
     @endphp
 
     <div class="card-riwayat" data-status="{{ $status }}"
-         style="background: white; border-radius: 15px; padding: 18px 20px; margin-bottom: 15px; border: 1px solid #edf2f7;">
+        style="background: white; border-radius: 15px; padding: 18px 20px; margin-bottom: 15px; border: 1px solid #edf2f7;">
 
-        {{-- INFO BUKU --}}
+        {{-- INFO BUKU (CARD) --}}
         <div style="display: flex; align-items: center; gap: 15px;">
-            <div style="width: 60px; height: 80px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 20px;"></i>
-            </div>
+
+            {{-- Cover buku --}}
+            @if($coverBuku)
+                <div style="width: 60px; height: 80px; border-radius: 8px; overflow: hidden; flex-shrink: 0;">
+                    <img src="{{ asset('storage/' . $coverBuku) }}"
+                        alt="{{ $judulBuku }}"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            @else
+                <div style="width: 60px; height: 80px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 20px;"></i>
+                </div>
+            @endif
+
             <div style="flex: 1; min-width: 0;">
                 <h4 style="margin: 0 0 3px; font-size: 15px; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     {{ $judulBuku }}
@@ -97,7 +109,8 @@
                         '{{ $trx->total_denda ?? 0 }}',
                         '{{ $status }}',
                         '{{ substr($trx->kode_otp, 0, 2) }}****',
-                        '{{ $trx->tanggal_dikembalikan ? \Carbon\Carbon::parse($trx->tanggal_dikembalikan)->format('d M Y, H:i') : '-' }}'
+                        '{{ $trx->tanggal_dikembalikan ? \Carbon\Carbon::parse($trx->tanggal_dikembalikan)->format('d M Y, H:i') : '-' }}',
+                        '{{ $coverBuku ? asset('storage/' . $coverBuku) : '' }}'
                     )"
                     style="border: 1.5px solid #1fcf8e; background: transparent; color: #1fcf8e; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 13px; white-space: nowrap; flex-shrink: 0;">
                 Detail
@@ -140,10 +153,10 @@
     <button style="width: 34px; height: 34px; border-radius: 8px; border: 1px solid #edf2f7; background: white; cursor: pointer; color: #718096;">›</button>
 </div>
 
-{{-- ===================== MODAL DETAIL RIWAYAT ===================== --}}
+{{-- MODAL DETAIL RIWAYAT --}}
 <div id="modal-riwayat"
-     onclick="tutupModalRiwayat(event)"
-     style="display: none; position: fixed; inset: 0; background: rgba(15,28,28,0.52); backdrop-filter: blur(3px); z-index: 999; justify-content: center; align-items: center; padding: 20px;">
+    onclick="tutupModalRiwayat(event)"
+    style="display: none; position: fixed; inset: 0; background: rgba(15,28,28,0.52); backdrop-filter: blur(3px); z-index: 999; justify-content: center; align-items: center; padding: 20px;">
 
     <div style="background: white; border-radius: 24px; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 28px 30px 24px; display: flex; flex-direction: column; gap: 20px;">
 
@@ -157,11 +170,15 @@
                     style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #718096; background: #f7fafc; border: none; font-size: 18px;">×</button>
         </div>
 
-        {{-- BOOK INFO CARD --}}
+        {{-- BOOK INFO CARD (MODAL) --}}
         <div style="background: #e8f5f0; border-radius: 14px; border: 1px solid #c8e9dc; padding: 18px; display: flex; align-items: flex-start; gap: 16px;">
-            <div style="width: 70px; height: 90px; border-radius: 8px; background: linear-gradient(145deg, #3aaea0, #2e7d7d); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(46,125,125,0.3);">
+
+            {{-- ✅ Cover di modal: pakai id="modal-cover-riwayat" untuk diganti via JS --}}
+            <div id="modal-cover-riwayat"
+                style="width: 70px; height: 90px; border-radius: 8px; background: linear-gradient(145deg, #3aaea0, #2e7d7d); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(46,125,125,0.3); overflow: hidden;">
                 <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.75); font-size: 22px;"></i>
             </div>
+
             <div style="flex: 1; min-width: 0;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;">
                     <span id="modal-kategori" style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; color: #1fcf8e; background: white; border: 1px solid #c8e9dc; border-radius: 4px; padding: 2px 8px;"></span>
@@ -239,37 +256,33 @@
 
 {{-- JAVASCRIPT --}}
 <script>
-// Filter tab
+// Filter tab riwayat
 function filterRiwayat(tab) {
-    // Update style tombol
     ['Semua','Dipinjam','Selesai','Terlambat','Kadaluarsa'].forEach(t => {
         const btn = document.getElementById('tab-' + t);
         if (t === tab) {
-            btn.style.borderColor  = '#1fcf8e';
-            btn.style.background   = '#f0fff4';
-            btn.style.color        = '#1fcf8e';
-            btn.style.fontWeight   = '600';
+            btn.style.borderColor = '#1fcf8e';
+            btn.style.background  = '#f0fff4';
+            btn.style.color       = '#1fcf8e';
+            btn.style.fontWeight  = '600';
         } else {
-            btn.style.borderColor  = '#edf2f7';
-            btn.style.background   = 'white';
-            btn.style.color        = '#718096';
-            btn.style.fontWeight   = '400';
+            btn.style.borderColor = '#edf2f7';
+            btn.style.background  = 'white';
+            btn.style.color       = '#718096';
+            btn.style.fontWeight  = '400';
         }
     });
-
-    // Filter card
     document.querySelectorAll('.card-riwayat').forEach(card => {
         const status = card.getAttribute('data-status');
-        if (tab === 'Semua') {
-            card.style.display = '';
-        } else {
-            card.style.display = status === tab ? '' : 'none';
-        }
+        card.style.display = (tab === 'Semua' || status === tab) ? '' : 'none';
     });
 }
 
-// Buka modal
-function bukaModalRiwayat(judul, penulis, kategori, libId, trxId, peminjam, booking, batas, kembali, kondisi, denda, status, otp, verifyDate) {
+// coverUrl
+function bukaModalRiwayat(judul, penulis, kategori, libId, trxId, peminjam,
+                        booking, batas, kembali, kondisi, denda, status,
+                        otp, verifyDate, coverUrl) {
+
     document.getElementById('modal-judul').textContent       = judul;
     document.getElementById('modal-penulis').textContent     = penulis;
     document.getElementById('modal-kategori').textContent    = kategori.toUpperCase();
@@ -282,7 +295,7 @@ function bukaModalRiwayat(judul, penulis, kategori, libId, trxId, peminjam, book
     document.getElementById('modal-otp').textContent         = otp;
     document.getElementById('modal-verify-date').textContent = verifyDate !== '-' ? 'Digunakan pada: ' + verifyDate : 'Belum digunakan';
 
-    // Kondisi
+    // Kondisi buku
     const kondisiEl = document.getElementById('modal-kondisi');
     kondisiEl.textContent = kondisi !== '-' ? kondisi : 'Belum dicatat';
     kondisiEl.style.color = kondisi === 'Baik' ? '#1fcf8e' : '#e53e3e';
@@ -306,6 +319,18 @@ function bukaModalRiwayat(judul, penulis, kategori, libId, trxId, peminjam, book
     badge.textContent      = status.toUpperCase();
     badge.style.background = s.bg;
     badge.style.color      = s.color;
+
+    //  Update cover di modal
+    const coverEl = document.getElementById('modal-cover-riwayat');
+    if (coverUrl && coverUrl !== '') {
+        coverEl.innerHTML         = '<img src="' + coverUrl + '" style="width:100%;height:100%;object-fit:cover;">';
+        coverEl.style.background  = 'none';
+        coverEl.style.boxShadow   = 'none';
+    } else {
+        coverEl.style.background  = 'linear-gradient(145deg, #3aaea0, #2e7d7d)';
+        coverEl.style.boxShadow   = '0 4px 14px rgba(46,125,125,0.3)';
+        coverEl.innerHTML         = '<i class="fa-solid fa-book" style="color:rgba(255,255,255,0.75);font-size:22px;"></i>';
+    }
 
     document.getElementById('modal-riwayat').style.display = 'flex';
     document.body.style.overflow = 'hidden';

@@ -5,10 +5,28 @@
 @section('content')
 
 {{-- ALERT DENDA --}}
-@if(($totalDenda ?? 0) > 0)
+@php
+    $adaTerlambat = ($pinjamanAktif ?? collect())->filter(function($trx) {
+        return $trx->status_transaksi === 'Dipinjam'
+            && $trx->batas_pengembalian
+            && \Carbon\Carbon::parse($trx->batas_pengembalian)->isPast();
+    })->count() > 0;
+
+    $adaDendaBelumBayar = ($pinjamanAktif ?? collect())->filter(function($trx) {
+        return ($trx->total_denda ?? 0) > 0
+            && $trx->status_transaksi !== 'Selesai';
+    })->sum('total_denda');
+@endphp
+
+@if($adaTerlambat)
+<div style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
+    <i class="fa-solid fa-triangle-exclamation" style="color: #e53e3e;"></i>
+    <span style="color: #e53e3e;">Kamu memiliki buku yang <b>terlambat dikembalikan</b>. Segera kembalikan ke perpustakaan.</span>
+</div>
+@elseif($adaDendaBelumBayar > 0)
 <div style="background: #fffbeb; border: 1px solid #f6ad55; border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
     <i class="fa-solid fa-triangle-exclamation" style="color: #d97706;"></i>
-    <span>Kamu memiliki keterlambatan — <b>Denda Rp {{ number_format($totalDenda, 0, ',', '.') }}</b>. Segera kembalikan buku.</span>
+    <span>Kamu memiliki denda belum lunas — <b>Rp {{ number_format($adaDendaBelumBayar, 0, ',', '.') }}</b>.</span>
 </div>
 @endif
 
@@ -45,9 +63,16 @@
                     : null;
             @endphp
             <div style="display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f7fafc;">
-                <div style="width: 55px; height: 75px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 20px;"></i>
-                </div>
+                @if($firstBuku?->cover)
+                    <div style="width: 55px; height: 75px; border-radius: 6px; overflow: hidden; flex-shrink: 0;">
+                        <img src="{{ asset('storage/' . $firstBuku->cover) }}"
+                            style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                @else
+                    <div style="width: 55px; height: 75px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 20px;"></i>
+                    </div>
+                @endif
                 <div style="flex: 1;">
                     <h4 style="margin: 0 0 3px; font-size: 14px; color: #2d3748;">{{ $judul }}</h4>
                     <p style="margin: 0 0 5px; font-size: 12px; color: #718096;">{{ $penulis }}</p>
@@ -72,7 +97,7 @@
             @endforelse
 
             <a href="{{ route('member.katalog') }}"
-               style="display: block; text-align: center; margin-top: 15px; padding: 12px; border: 2px solid #1fcf8e; border-radius: 10px; color: #1fcf8e; text-decoration: none; font-weight: 500;">
+                style="display: block; text-align: center; margin-top: 15px; padding: 12px; border: 2px solid #1fcf8e; border-radius: 10px; color: #1fcf8e; text-decoration: none; font-weight: 500;">
                 + Pinjam Buku Baru
             </a>
         </div>
@@ -179,7 +204,7 @@
                 {{ Auth::user()->anggota->status_verifikasi ?? 'Incomplete' }}
             </p>
             <a href="{{ route('member.profil') }}"
-               style="display: block; text-align: center; background: #1fcf8e; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 14px;">
+                style="display: block; text-align: center; background: #1fcf8e; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 14px;">
                 Lihat Profil
             </a>
         </div>
