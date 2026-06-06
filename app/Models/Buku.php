@@ -16,6 +16,8 @@ class Buku extends Model
         'tahun_terbit',
         'stok_total',
         'stok_tersedia',
+        'deskripsi',
+        'cover',
     ];
 
     // Relasi ke tabel kategori
