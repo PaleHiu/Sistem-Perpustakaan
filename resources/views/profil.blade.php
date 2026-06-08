@@ -9,7 +9,17 @@
     $namaLengkap   = $anggota?->nama_lengkap ?? '';
     $inisial       = collect(explode(' ', $namaLengkap))->map(fn($w) => strtoupper(substr($w,0,1)))->take(2)->join('');
     $totalDipinjam = $anggota ? \App\Models\Peminjam::where('anggota_id', $anggota->id)->count() : 0;
+    
+    // LOGIC STATUS & PENGUNCIAN FORM
     $statusVerif   = $anggota?->status_verifikasi ?? 'Incomplete';
+    $isPending     = $statusVerif === 'Pending';
+    $isIncomplete  = $statusVerif === 'Incomplete';
+    
+    // Form dikunci HANYA JIKA statusnya sudah Approved/Rejected (bukan Incomplete & bukan Pending)
+    $isLocked      = !$isIncomplete && !$isPending; 
+    
+    // Cek apakah NIK sudah pernah diisi
+    $hasNik        = !empty($anggota?->nik);
 @endphp
 
 {{-- NOTIFIKASI --}}
@@ -33,6 +43,11 @@
     <i class="fa-solid fa-circle-xmark"></i> {{ session('error_password') }}
 </div>
 @endif
+@if(session('error'))
+<div style="background:#fff5f5;border:1px solid #fed7d7;border-radius:10px;padding:12px 20px;margin-bottom:20px;color:#e53e3e;display:flex;align-items:center;gap:10px;">
+    <i class="fa-solid fa-circle-xmark"></i> {{ session('error') }}
+</div>
+@endif
 @if($errors->any())
 <div style="background:#fff5f5;border:1px solid #fed7d7;border-radius:10px;padding:12px 20px;margin-bottom:20px;color:#e53e3e;">
     <i class="fa-solid fa-circle-xmark"></i>
@@ -43,26 +58,25 @@
 {{-- WRAPPER DUA KOLOM --}}
 <div style="display:flex;gap:25px;align-items:flex-start;">
 
-    {{-- ===================== KOLOM KIRI ===================== --}}
+    {{-- KOLOM KIRI --}}
     <div style="width:260px;flex-shrink:0;">
-
-        {{-- KARTU PROFIL --}}
         <div style="background:white;border-radius:15px;padding:25px 20px;border:1px solid #edf2f7;text-align:center;">
-
-            {{-- Foto profil + tombol kamera --}}
+            
             <div style="position:relative;width:80px;margin:0 auto 15px;">
                 @if($anggota?->foto_profil)
-                    <img src="{{ asset('storage/' . $anggota->foto_profil) }}"
-                         style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
+                    <img src="{{ asset('storage/' . $anggota->foto_profil) }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
                 @else
                     <div style="width:80px;height:80px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:white;">
                         {{ $inisial ?: 'U' }}
                     </div>
                 @endif
-                <label for="input-foto-profil"
-                       style="position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
+                
+                @if(!$isPending)
+                <label for="input-foto-profil" id="camera-icon-wrapper"
+                       style="display:{{ $isIncomplete ? 'flex' : 'none' }}; position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1fcf8e;border-radius:50%;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
                     <i class="fa-solid fa-camera" style="font-size:11px;color:white;"></i>
                 </label>
+                @endif
             </div>
 
             <h3 style="font-size:17px;font-weight:700;color:#2d3748;margin-bottom:4px;">
@@ -71,7 +85,6 @@
             <p style="font-size:13px;color:#718096;margin-bottom:8px;">{{ Auth::user()->email }}</p>
             <p style="font-size:12px;color:#718096;margin-bottom:12px;">NIK: {{ $anggota?->nik ?? 'Belum diisi' }}</p>
 
-            {{-- Badge status verifikasi --}}
             @php
                 $badgeColor = match($statusVerif) {
                     'Approved' => ['bg'=>'#f0fff4','color'=>'#38a169','icon'=>'fa-circle-check'],
@@ -85,7 +98,6 @@
                 {{ $statusVerif }}
             </span>
 
-            {{-- Stats --}}
             <div style="display:flex;justify-content:space-between;background:#f8fafc;border-radius:10px;padding:12px 15px;margin-bottom:12px;">
                 <span style="font-size:13px;color:#718096;">Total Pinjaman</span>
                 <strong style="font-size:13px;color:#2d3748;">{{ $totalDipinjam }}</strong>
@@ -95,84 +107,72 @@
                 <strong style="font-size:13px;color:#2d3748;">{{ Auth::user()->created_at->format('M Y') }}</strong>
             </div>
 
-            {{-- Logout --}}
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" style="width:100%;padding:12px;border:2px solid #e53e3e;background:white;color:#e53e3e;border-radius:30px;cursor:pointer;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> Log Out
                 </button>
             </form>
-
         </div>
-        {{-- AKHIR KARTU PROFIL --}}
-
     </div>
-    {{-- AKHIR KOLOM KIRI --}}
 
-    {{-- ===================== KOLOM KANAN ===================== --}}
+    {{-- KOLOM KANAN --}}
     <div style="flex:1;background:white;border-radius:15px;padding:25px;border:1px solid #edf2f7;">
 
-        {{-- TABS --}}
         <div style="display:flex;border-bottom:1px solid #edf2f7;margin-bottom:25px;">
-            <button onclick="switchTab('info')" id="tab-info"
-                    style="padding:12px 20px;font-size:14px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid #1fcf8e;color:#1fcf8e;margin-bottom:-1px;">
-                Informasi Pribadi
-            </button>
-            <button onclick="switchTab('keamanan')" id="tab-keamanan"
-                    style="padding:12px 20px;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:#718096;">
-                Keamanan
-            </button>
+            <button onclick="switchTab('info')" id="tab-info" style="padding:12px 20px;font-size:14px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid #1fcf8e;color:#1fcf8e;margin-bottom:-1px;">Informasi Pribadi</button>
+            <button onclick="switchTab('keamanan')" id="tab-keamanan" style="padding:12px 20px;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:#718096;">Keamanan</button>
         </div>
 
         {{-- TAB: INFORMASI PRIBADI --}}
         <div id="content-info">
             <form method="POST" action="{{ route('member.profil.update') }}" enctype="multipart/form-data">
                 @csrf
+                <input type="hidden" name="password_konfirmasi" id="hidden_password_konfirmasi">
+                <input type="file" id="input-foto-profil" name="foto_profil" accept="image/jpg,image/jpeg,image/png" style="display:none;" class="locked-input" {{ $isIncomplete ? '' : 'disabled' }} onchange="this.form.submit()">
 
-                {{-- Input foto profil tersembunyi --}}
-                <input type="file" id="input-foto-profil" name="foto_profil"
-                       accept="image/jpg,image/jpeg,image/png"
-                       style="display:none;"
-                       onchange="this.form.submit()">
-
-                {{-- Nama Lengkap --}}
                 <div style="margin-bottom:20px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Nama Lengkap <span style="color:#e53e3e;">*</span></label>
-                    <input type="text" name="nama_lengkap"
+                    <input type="text" name="nama_lengkap" class="locked-input"
                            value="{{ old('nama_lengkap', $anggota?->nama_lengkap ?? '') }}"
-                           required
-                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;outline:none;background:#fafafa;">
+                           {{ $isIncomplete ? 'required' : 'disabled' }}
+                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;outline:none;background:{{ $isIncomplete ? '#fafafa' : '#e2e8f0' }};cursor:{{ $isIncomplete ? 'text' : 'not-allowed' }};">
                 </div>
 
-                {{-- NIK & No HP --}}
                 <div style="display:flex;gap:15px;margin-bottom:20px;">
                     <div style="flex:1;">
                         <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">NIK</label>
-                        <input type="text" name="nik" maxlength="16"
-                               value="{{ old('nik', $anggota?->nik ?? '') }}"
-                               placeholder="16 digit NIK"
-                               style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                        <div style="position:relative;">
+                            <input type="text" name="nik" maxlength="16" class="{{ $hasNik ? '' : 'locked-input' }}"
+                                   value="{{ old('nik', $anggota?->nik ?? '') }}"
+                                   placeholder="16 digit NIK" {{ ($hasNik || !$isIncomplete) ? 'disabled' : '' }}
+                                   style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:{{ ($hasNik || !$isIncomplete) ? '#e2e8f0' : '#fafafa' }};cursor:{{ ($hasNik || !$isIncomplete) ? 'not-allowed' : 'text' }};outline:none;">
+                            @if($hasNik)
+                                <i class="fa-solid fa-lock" style="position:absolute; right:15px; top:15px; color:#a0aec0; font-size:12px;" title="NIK tidak dapat diubah"></i>
+                            @endif
+                        </div>
+                        @if($hasNik)
+                            <p style="font-size:11px;color:#e53e3e;margin-top:6px;">* NIK telah tervalidasi dan tidak dapat diubah.</p>
+                        @endif
                     </div>
                     <div style="flex:1;">
                         <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">No. HP</label>
-                        <input type="text" name="no_hp" maxlength="15"
+                        <input type="text" name="no_hp" maxlength="15" class="locked-input"
                                value="{{ old('no_hp', $anggota?->no_hp ?? '') }}"
-                               placeholder="08xxxxxxxxxx"
-                               style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                               placeholder="08xxxxxxxxxx" {{ $isIncomplete ? '' : 'disabled' }}
+                               style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:{{ $isIncomplete ? '#fafafa' : '#e2e8f0' }};cursor:{{ $isIncomplete ? 'text' : 'not-allowed' }};outline:none;">
                     </div>
                 </div>
 
-                {{-- Alamat --}}
                 <div style="margin-bottom:25px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Alamat Domisili</label>
-                    <textarea name="alamat" rows="3"
-                              placeholder="Masukkan alamat lengkap..."
-                              style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;resize:none;font-family:inherit;">{{ old('alamat', $anggota?->alamat ?? '') }}</textarea>
+                    <textarea name="alamat" rows="3" class="locked-input"
+                              placeholder="Masukkan alamat lengkap..." {{ $isIncomplete ? '' : 'disabled' }}
+                              style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:{{ $isIncomplete ? '#fafafa' : '#e2e8f0' }};cursor:{{ $isIncomplete ? 'text' : 'not-allowed' }};outline:none;resize:none;font-family:inherit;">{{ old('alamat', $anggota?->alamat ?? '') }}</textarea>
                 </div>
 
                 <hr style="border:none;border-top:1px solid #edf2f7;margin-bottom:25px;">
 
-                {{-- DOKUMEN IDENTITAS --}}
                 <h4 style="font-size:15px;font-weight:700;color:#2d3748;margin-bottom:16px;">Dokumen Identitas</h4>
 
                 @if($statusVerif === 'Pending')
@@ -201,9 +201,7 @@
                     <div style="flex:1;min-width:200px;max-width:280px;">
                         @if($anggota?->dokumen_identitas)
                             <a href="{{ asset('storage/' . $anggota->dokumen_identitas) }}" target="_blank">
-                                <img src="{{ asset('storage/' . $anggota->dokumen_identitas) }}"
-                                     alt="Dokumen Identitas"
-                                     style="width:100%;border-radius:10px;border:2px solid #1fcf8e;object-fit:cover;">
+                                <img src="{{ asset('storage/' . $anggota->dokumen_identitas) }}" alt="Dokumen" style="width:100%;border-radius:10px;border:2px solid #1fcf8e;object-fit:cover;">
                             </a>
                         @else
                             <div style="width:100%;height:130px;border-radius:10px;border:2px dashed #cbd5e0;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
@@ -216,18 +214,33 @@
                         <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">
                             {{ $anggota?->dokumen_identitas ? 'Ganti Dokumen' : 'Unggah Dokumen' }}
                         </label>
-                        <input type="file" name="dokumen_identitas"
-                               accept=".jpg,.jpeg,.png,.pdf"
-                               style="width:100%;padding:10px;border:1px dashed #cbd5e0;border-radius:8px;font-size:13px;background:#fafafa;cursor:pointer;">
+                        <input type="file" name="dokumen_identitas" class="locked-input" accept=".jpg,.jpeg,.png,.pdf" {{ $isIncomplete ? '' : 'disabled' }}
+                               style="width:100%;padding:10px;border:1px dashed #cbd5e0;border-radius:8px;font-size:13px;background:{{ $isIncomplete ? '#fafafa' : '#e2e8f0' }};cursor:{{ $isIncomplete ? 'pointer' : 'not-allowed' }};">
                         <p style="font-size:11px;color:#a0aec0;margin-top:6px;">Format: JPG, PNG, PDF. Maks 2MB.</p>
                     </div>
                 </div>
 
-                <div style="display:flex;justify-content:flex-end;padding-top:20px;border-top:1px solid #edf2f7;">
-                    <button type="submit"
-                            style="padding:13px 35px;background:#1fcf8e;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;">
-                        Simpan Perubahan
-                    </button>
+                {{-- AREA TOMBOL DINAMIS --}}
+                <div style="display:flex;justify-content:flex-end;padding-top:20px;border-top:1px solid #edf2f7;gap:10px;">
+                    @if($isPending)
+                        <button type="button" disabled style="padding:13px 35px;background:#a0aec0;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:not-allowed;">
+                            Menunggu Verifikasi Admin
+                        </button>
+                    @elseif($isIncomplete)
+                        {{-- User Baru / Incomplete: Langsung tombol Simpan Profil --}}
+                        <button type="submit" style="padding:12px 30px;background:#1fcf8e;color:white;border:none;border-radius:30px;font-size:14px;font-weight:600;cursor:pointer;">
+                            Simpan Profil
+                        </button>
+                    @else
+                        {{-- User Lama: Tombol Edit -> Munculkan Modal --}}
+                        <button type="button" id="btn-trigger-edit" onclick="openPasswordModal()"
+                                style="padding:12px 30px;background:#3182ce;color:white;border:none;border-radius:30px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:0.3s;">
+                            <i class="fa-solid fa-lock-open"></i> Edit Profil
+                        </button>
+                        <button type="submit" id="btn-save-profile" style="display:none; padding:12px 30px;background:#1fcf8e;color:white;border:none;border-radius:30px;font-size:14px;font-weight:600;cursor:pointer;">
+                            Simpan Perubahan
+                        </button>
+                    @endif
                 </div>
             </form>
         </div>
@@ -242,37 +255,67 @@
                 @csrf
                 <div style="margin-bottom:20px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Password Saat Ini <span style="color:#e53e3e;">*</span></label>
-                    <input type="password" name="password_lama" required
-                           placeholder="Masukkan password saat ini"
-                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                    <input type="password" name="password_lama" required placeholder="Masukkan password saat ini" style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                 </div>
                 <div style="margin-bottom:20px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Password Baru <span style="color:#e53e3e;">*</span></label>
-                    <input type="password" name="password_baru" required minlength="8"
-                           placeholder="Minimal 8 karakter"
-                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                    <input type="password" name="password_baru" required minlength="8" placeholder="Minimal 8 karakter" style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                 </div>
                 <div style="margin-bottom:30px;">
                     <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Konfirmasi Password Baru <span style="color:#e53e3e;">*</span></label>
-                    <input type="password" name="password_baru_confirmation" required
-                           placeholder="Ulangi password baru"
-                           style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
+                    <input type="password" name="password_baru_confirmation" required placeholder="Ulangi password baru" style="width:100%;padding:12px 15px;border:1px solid #edf2f7;border-radius:10px;font-size:14px;color:#2d3748;background:#fafafa;outline:none;">
                 </div>
                 <div style="display:flex;justify-content:flex-end;">
-                    <button type="submit"
-                            style="padding:13px 35px;background:#3182ce;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;">
+                    <button type="submit" style="padding:13px 35px;background:#3182ce;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;">
                         Ubah Password
                     </button>
                 </div>
             </form>
+
+            <hr style="border:none;border-top:1px solid #edf2f7;margin:35px 0 25px 0;">
+
+            <h4 style="font-size:15px;font-weight:700;color:#e53e3e;margin-bottom:5px;">Hapus Akun Permanen</h4>
+            <p style="font-size:13px;color:#718096;margin-bottom:20px;">Peringatan: Sekali Anda menghapus akun, semua data profil dan riwayat peminjaman akan hilang dan tidak dapat dipulihkan kembali.</p>
+
+            <form method="POST" action="{{ route('member.profil.hapus') }}" onsubmit="return confirm('Peringatan Terakhir!\n\nApakah Anda YAKIN ingin menghapus akun ini selamanya? Data tidak dapat dipulihkan!');">
+                @csrf
+                @method('DELETE')
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">Konfirmasi Password <span style="color:#e53e3e;">*</span></label>
+                    <input type="password" name="password_hapus" required placeholder="Masukkan password Anda untuk konfirmasi" style="width:100%;padding:12px 15px;border:1px solid #fc8181;border-radius:10px;font-size:14px;color:#2d3748;background:#fff5f5;outline:none;">
+                </div>
+                <div style="display:flex;justify-content:flex-end;">
+                    <button type="submit" style="padding:13px 35px;background:#e53e3e;color:white;border:none;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-trash-can"></i> Hapus Akun
+                    </button>
+                </div>
+            </form>
         </div>
-        {{-- AKHIR TAB KEAMANAN --}}
-
     </div>
-    {{-- AKHIR KOLOM KANAN --}}
-
 </div>
-{{-- AKHIR WRAPPER --}}
+
+{{-- MODAL POP-UP PASSWORD --}}
+<div id="passwordModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
+    <div style="background:white; padding:30px; border-radius:15px; width:100%; max-width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h4 style="font-size:18px; font-weight:700; color:#2d3748; margin:0;">Validasi Keamanan</h4>
+            <i class="fa-solid fa-lock" style="color:#a0aec0;"></i>
+        </div>
+        <p style="font-size:13px; color:#718096; margin-bottom:20px; line-height:1.5;">Untuk melindungi data Anda, masukkan password akun Anda untuk membuka akses edit profil.</p>
+        
+        <input type="password" id="modal_password_input" placeholder="Masukkan password Anda" 
+               style="width:100%; padding:12px 15px; border:1px solid #edf2f7; border-radius:10px; margin-bottom:10px; font-size:14px; outline:none; background:#fafafa;">
+        
+        <div id="modal_error_msg" style="color:#e53e3e; font-size:12px; margin-bottom:15px; display:none;">
+            <i class="fa-solid fa-circle-xmark"></i> Password salah! Silakan coba lagi.
+        </div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <button type="button" onclick="closePasswordModal()" style="padding:10px 20px; background:#edf2f7; color:#4a5568; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none;">Batal</button>
+            <button type="button" id="btn-verify-pwd" onclick="verifyPasswordAndUnlock()" style="padding:10px 20px; background:#3182ce; color:white; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; display:flex; align-items:center; gap:6px;">Verifikasi</button>
+        </div>
+    </div>
+</div>
 
 <script>
 function switchTab(tab) {
@@ -291,6 +334,79 @@ function switchTab(tab) {
 @if(session('error_password') || $errors->has('password_baru') || $errors->has('password_lama'))
     switchTab('keamanan');
 @endif
+
+function openPasswordModal() {
+    document.getElementById('passwordModal').style.display = 'flex';
+    document.getElementById('modal_password_input').value = '';
+    document.getElementById('modal_error_msg').style.display = 'none';
+    setTimeout(() => document.getElementById('modal_password_input').focus(), 100);
+}
+
+function closePasswordModal() {
+    document.getElementById('passwordModal').style.display = 'none';
+}
+
+function verifyPasswordAndUnlock() {
+    const pwdInput = document.getElementById('modal_password_input').value;
+    const btn = document.getElementById('btn-verify-pwd');
+    
+    if(!pwdInput) {
+        document.getElementById('modal_error_msg').style.display = 'block';
+        document.getElementById('modal_error_msg').innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Password tidak boleh kosong!';
+        return;
+    }
+
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengecek...';
+    btn.disabled = true;
+
+    fetch('{{ route("member.profil.verify-password") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify({ password: pwdInput })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.innerHTML = 'Verifikasi';
+        btn.disabled = false;
+        
+        if (data.valid) {
+            closePasswordModal();
+            unlockForm(pwdInput);
+        } else {
+            document.getElementById('modal_error_msg').style.display = 'block';
+            document.getElementById('modal_error_msg').innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Password salah! Silakan coba lagi.';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.innerHTML = 'Verifikasi';
+        btn.disabled = false;
+        alert('Terjadi kesalahan jaringan.');
+    });
+}
+
+function unlockForm(validatedPassword) {
+    document.getElementById('hidden_password_konfirmasi').value = validatedPassword;
+    
+    document.querySelectorAll('.locked-input').forEach(el => {
+        el.disabled = false;
+        el.style.backgroundColor = '#fafafa';
+        el.style.cursor = el.type === 'file' ? 'pointer' : 'text';
+    });
+    
+    const cameraIcon = document.getElementById('camera-icon-wrapper');
+    if (cameraIcon) cameraIcon.style.display = 'flex';
+
+    document.getElementById('btn-trigger-edit').style.display = 'none';
+    document.getElementById('btn-save-profile').style.display = 'block';
+}
+
+document.getElementById("modal_password_input").addEventListener("keypress", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    verifyPasswordAndUnlock();
+  }
+});
 </script>
 
 @endsection

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SIPUS – Sistem Perpustakaan</title>
+    <link rel="preload" as="image" href="{{ asset('ui_auth/Background.webp') }}" fetchpriority="high">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
     <style>
         :root {
@@ -38,6 +39,7 @@
             position: absolute;
             inset: 0;
             z-index: 0;
+            background-color: var(--navy); /* TAMBAHKAN BARIS INI: Warna fallback saat gambar belum muncul */
         }
         .hero__bg-img {
             width: 100%;
@@ -244,7 +246,7 @@
     {{-- ── Background ── --}}
     <div class="hero__bg">
         <img class="hero__bg-img"
-             src="{{ asset('ui_auth/Background.jpg') }}"
+             src="{{ asset('ui_auth/Background.webp') }}"
              alt="Library interior" />
         <div class="hero__overlay"></div>
         <div class="hero__top-fade"></div>
