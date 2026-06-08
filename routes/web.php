@@ -24,7 +24,7 @@ Route::get('/', function () {
 // ============================================
 
 Route::get('/sipus/lupa-password', function () {
-    return view('Auth.forgot_password');
+    return view('auth.forgot_password');
 })->name('sipus.forgot.password');
 
 Route::post('/sipus/lupa-password', function (\Illuminate\Http\Request $request) {
@@ -80,7 +80,7 @@ Route::get('/sipus/lupa-password/otp', function () {
     if (!session('reset_email')) {
         return redirect()->route('sipus.forgot.password');
     }
-    return view('Auth.forgot_otp');
+    return view('auth.forgot_otp');
 })->name('sipus.forgot.otp');
 
 Route::post('/sipus/lupa-password/otp', function (\Illuminate\Http\Request $request) {
@@ -117,7 +117,7 @@ Route::get('/sipus/lupa-password/reset', function () {
     if (!session('reset_email') || !session('reset_verified')) {
         return redirect()->route('sipus.forgot.password');
     }
-    return view('Auth.forgot_reset');
+    return view('auth.forgot_reset');
 })->name('sipus.forgot.reset');
 
 Route::post('/sipus/lupa-password/reset', function (\Illuminate\Http\Request $request) {
