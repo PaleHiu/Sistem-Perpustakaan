@@ -4,6 +4,12 @@
 
 @section('content')
 
+<style>
+    .scroll-buku::-webkit-scrollbar { width: 5px; }
+    .scroll-buku::-webkit-scrollbar-track { background: transparent; }
+    .scroll-buku::-webkit-scrollbar-thumb { background: #c8e9dc; border-radius: 10px; }
+</style>
+
 <div style="margin-bottom: 20px;">
     <h2 style="font-size: 20px; color: #2d3748; margin-bottom: 5px;">Riwayat Peminjaman</h2>
     <p style="font-size: 13px; color: #718096;">Daftar lengkap transaksi peminjaman buku yang telah Anda lakukan.</p>
@@ -57,7 +63,27 @@
         $tanggalKembali = $trx->batas_pengembalian
             ? \Carbon\Carbon::parse($trx->batas_pengembalian)->translatedFormat('d M Y')
             : '-';
-    @endphp
+
+    $tanggalKembali = $trx->batas_pengembalian
+            ? \Carbon\Carbon::parse($trx->batas_pengembalian)->translatedFormat('d M Y')
+            : '-';
+
+
+    // --- TAMBAHAN BARU: Siapkan Data Buku Format JSON ---
+            $bookDetails = [];
+            foreach($trx->detailPeminjaman as $detail) {
+                $bookDetails[] = [
+                    'judul'    => $detail->buku?->judul ?? 'Buku tidak diketahui',
+                    'penulis'  => $detail->buku?->penulis ?? '-',
+                    'kategori' => $detail->buku?->kategori?->nama_kategori ?? 'Umum',
+                    'cover'    => $detail->buku?->cover ? asset('storage/' . $detail->buku->cover) : '',
+                    'libId'    => 'LIB-' . str_pad($detail->buku?->id ?? 0, 4, '0', STR_PAD_LEFT)
+                ];
+            }
+            // Ganti baris ini agar kebal dari error tanda kutip!
+            $booksBase64 = base64_encode(json_encode($bookDetails));
+            // ----------------------------------------------------
+        @endphp
 
     <div class="card-riwayat" data-status="{{ $status }}"
         style="background: white; border-radius: 15px; padding: 18px 20px; margin-bottom: 15px; border: 1px solid #edf2f7;">
@@ -94,12 +120,9 @@
                 {{ strtoupper($status) }}
             </span>
 
-            {{-- TOMBOL DETAIL --}}
-            <button onclick="bukaModalRiwayat(
-                        '{{ addslashes($judulBuku) }}',
-                        '{{ addslashes($penulisBuku) }}',
-                        '{{ $trx->detailPeminjaman->first()?->buku?->kategori?->nama_kategori ?? 'Umum' }}',
-                        'LIB-{{ str_pad($trx->id, 4, '0', STR_PAD_LEFT) }}',
+{{-- TOMBOL DETAIL --}}
+                        <button onclick="bukaModalRiwayat(
+                        '{{ $booksBase64 }}', 
                         'TRX-{{ str_pad($trx->id, 4, '0', STR_PAD_LEFT) }}',
                         '{{ addslashes($trx->anggota?->nama_lengkap ?? Auth::user()->anggota?->nama_lengkap ?? '-') }}',
                         '{{ $trx->waktu_booking ? \Carbon\Carbon::parse($trx->waktu_booking)->format('d M Y, H:i') : '-' }}',
@@ -108,9 +131,8 @@
                         '{{ $status === 'Selesai' ? 'Baik' : '-' }}',
                         '{{ $trx->total_denda ?? 0 }}',
                         '{{ $status }}',
-                        '{{ substr($trx->kode_otp, 0, 2) }}****',
-                        '{{ $trx->tanggal_dikembalikan ? \Carbon\Carbon::parse($trx->tanggal_dikembalikan)->format('d M Y, H:i') : '-' }}',
-                        '{{ $coverBuku ? asset('storage/' . $coverBuku) : '' }}'
+                        '{{ $trx->kode_otp }}',
+                        '{{ $trx->tanggal_dikembalikan ? \Carbon\Carbon::parse($trx->tanggal_dikembalikan)->format('d M Y, H:i') : '-' }}'
                     )"
                     style="border: 1.5px solid #1fcf8e; background: transparent; color: #1fcf8e; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-size: 13px; white-space: nowrap; flex-shrink: 0;">
                 Detail
@@ -171,27 +193,8 @@
         </div>
 
         {{-- BOOK INFO CARD (MODAL) --}}
-        <div style="background: #e8f5f0; border-radius: 14px; border: 1px solid #c8e9dc; padding: 18px; display: flex; align-items: flex-start; gap: 16px;">
-
-            {{-- ✅ Cover di modal: pakai id="modal-cover-riwayat" untuk diganti via JS --}}
-            <div id="modal-cover-riwayat"
-                style="width: 70px; height: 90px; border-radius: 8px; background: linear-gradient(145deg, #3aaea0, #2e7d7d); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(46,125,125,0.3); overflow: hidden;">
-                <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.75); font-size: 22px;"></i>
+        <div id="modal-books-container" class="scroll-buku" style="display: flex; flex-direction: column; gap: 12px; max-height: 230px; overflow-y: auto; padding-right: 5px;">
             </div>
-
-            <div style="flex: 1; min-width: 0;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;">
-                    <span id="modal-kategori" style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; color: #1fcf8e; background: white; border: 1px solid #c8e9dc; border-radius: 4px; padding: 2px 8px;"></span>
-                    <span id="modal-lib-id" style="font-size: 11.5px; color: #a0aec0; font-weight: 500;"></span>
-                </div>
-                <p id="modal-judul" style="font-size: 15px; font-weight: 800; color: #1a202c; line-height: 1.3; margin-bottom: 4px;"></p>
-                <p id="modal-penulis" style="font-size: 12.5px; color: #718096; margin-bottom: 8px;"></p>
-                <p style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #718096;">
-                    <i class="fa-regular fa-file-lines" style="font-size: 12px;"></i>
-                    Jumlah dipinjam: 1 eksemplar
-                </p>
-            </div>
-        </div>
 
         {{-- DETAIL GRID --}}
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; border-top: 1px solid #edf2f7; padding-top: 20px;">
@@ -231,15 +234,23 @@
             </div>
         </div>
 
-        {{-- OTP SECTION --}}
-        <div style="background: #f7fafc; border-radius: 14px; border: 1px solid #edf2f7; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+{{-- OTP SECTION --}}
+        <div id="modal-otp-container" style="background: #f0fff4; border-radius: 14px; border: 1.5px dashed #1fcf8e; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
             <div>
-                <p style="font-size: 11.5px; color: #a0aec0; font-weight: 500; margin-bottom: 6px;">OTP Pengembalian</p>
-                <p id="modal-otp" style="font-size: 22px; font-weight: 800; color: #1fcf8e; letter-spacing: 0.06em;"></p>
+                <p id="modal-otp-title" style="font-size: 11.5px; color: #2d3748; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">OTP Pengembalian</p>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <p id="modal-otp" style="font-size: 26px; font-weight: 800; color: #1fcf8e; letter-spacing: 0.15em; margin: 0; font-family: monospace;"></p>
+                    
+                    {{-- Tombol Copy --}}
+                    <button id="btn-copy-otp" onclick="copyOtpRiwayat()" style="background: white; border: 1px solid #c8e9dc; border-radius: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1fcf8e; display: none;" title="Salin Kode">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+                <p id="modal-otp-hint" style="font-size: 11px; color: #718096; margin-top: 6px; margin-bottom: 0; display: none;">Berikan kode OTP ini ke petugas perpustakaan.</p>
             </div>
             <div style="text-align: right;">
                 <p style="font-size: 11px; color: #a0aec0; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 4px;">Verifikasi System</p>
-                <p id="modal-verify-date" style="font-size: 12px; color: #718096;"></p>
+                <p id="modal-verify-date" style="font-size: 12px; color: #718096; margin: 0;"></p>
             </div>
         </div>
 
@@ -278,29 +289,86 @@ function filterRiwayat(tab) {
     });
 }
 
-// coverUrl
-function bukaModalRiwayat(judul, penulis, kategori, libId, trxId, peminjam,
-                        booking, batas, kembali, kondisi, denda, status,
-                        otp, verifyDate, coverUrl) {
+// Fungsi Buka Modal Baru
+function bukaModalRiwayat(booksBase64, trxId, peminjam, booking, batas, kembali, kondisi, denda, status, otp, verifyDate) {
 
-    document.getElementById('modal-judul').textContent       = judul;
-    document.getElementById('modal-penulis').textContent     = penulis;
-    document.getElementById('modal-kategori').textContent    = kategori.toUpperCase();
-    document.getElementById('modal-lib-id').textContent      = 'ID: ' + libId;
+    // 1. Render Daftar Buku (Dekode dari Base64)
+    const books = JSON.parse(atob(booksBase64));
+    const container = document.getElementById('modal-books-container');
+    container.innerHTML = ''; // Bersihkan kontainer
+
+    books.forEach(book => {
+        let coverHtml = book.cover 
+            ? `<img src="${book.cover}" style="width:100%;height:100%;object-fit:cover;">`
+            : `<i class="fa-solid fa-book" style="color:rgba(255,255,255,0.75);font-size:22px;"></i>`;
+        
+        let coverStyle = book.cover ? 'background:none; box-shadow:none;' : 'background:linear-gradient(145deg, #3aaea0, #2e7d7d); box-shadow:0 4px 14px rgba(46,125,125,0.3);';
+
+        const bookHtml = `
+        <div style="background: #e8f5f0; border-radius: 14px; border: 1px solid #c8e9dc; padding: 18px; display: flex; align-items: flex-start; gap: 16px; flex-shrink: 0;">
+            <div style="width: 70px; height: 90px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; ${coverStyle}">
+                ${coverHtml}
+            </div>
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;">
+                    <span style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; color: #1fcf8e; background: white; border: 1px solid #c8e9dc; border-radius: 4px; padding: 2px 8px;">${book.kategori.toUpperCase()}</span>
+                    <span style="font-size: 11.5px; color: #a0aec0; font-weight: 500;">ID: ${book.libId}</span>
+                </div>
+                <p style="font-size: 15px; font-weight: 800; color: #1a202c; line-height: 1.3; margin-bottom: 4px;">${book.judul}</p>
+                <p style="font-size: 12.5px; color: #718096; margin-bottom: 8px;">${book.penulis}</p>
+                <p style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #718096;">
+                    <i class="fa-regular fa-file-lines" style="font-size: 12px;"></i> Jumlah dipinjam: 1 eksemplar
+                </p>
+            </div>
+        </div>
+        `;
+        container.innerHTML += bookHtml;
+    });
+
+    // 2. Render Detail Transaksi
     document.getElementById('modal-trx-id').textContent      = trxId;
     document.getElementById('modal-peminjam').textContent    = peminjam;
     document.getElementById('modal-booking').textContent     = booking;
     document.getElementById('modal-batas').textContent       = batas;
     document.getElementById('modal-kembali').textContent     = kembali !== '-' ? kembali : 'Belum dikembalikan';
-    document.getElementById('modal-otp').textContent         = otp;
+
+    // === LOGIKA OTP PINTAR ===
+    const otpContainer = document.getElementById('modal-otp-container');
+    const otpTitle     = document.getElementById('modal-otp-title');
+    const otpText      = document.getElementById('modal-otp');
+    const otpHint      = document.getElementById('modal-otp-hint');
+    const btnCopy      = document.getElementById('btn-copy-otp');
+
+    if (status === 'Dipinjam' || status === 'Terlambat') {
+        // Mode Aktif (Siap Dikembalikan)
+        otpTitle.textContent = 'OTP PENGEMBALIAN';
+        otpText.textContent  = otp; // Tampilkan utuh
+        otpText.style.color  = '#1fcf8e';
+        otpContainer.style.background  = '#f0fff4';
+        otpContainer.style.borderColor = '#1fcf8e';
+        otpContainer.style.borderStyle = 'dashed';
+        otpHint.style.display = 'block';
+        btnCopy.style.display = 'flex';
+    } else {
+        // Mode Non-aktif (Sudah Selesai / Batal)
+        otpTitle.textContent = 'KODE OTP TRANSAKSI';
+        otpText.textContent  = otp.substring(0, 2) + '****'; // Sensor kodenya
+        otpText.style.color  = '#a0aec0';
+        otpContainer.style.background  = '#f7fafc';
+        otpContainer.style.borderColor = '#edf2f7';
+        otpContainer.style.borderStyle = 'solid';
+        otpHint.style.display = 'none';
+        btnCopy.style.display = 'none';
+    }
+    // =========================
+
     document.getElementById('modal-verify-date').textContent = verifyDate !== '-' ? 'Digunakan pada: ' + verifyDate : 'Belum digunakan';
 
-    // Kondisi buku
+    // Kondisi buku & Denda
     const kondisiEl = document.getElementById('modal-kondisi');
     kondisiEl.textContent = kondisi !== '-' ? kondisi : 'Belum dicatat';
     kondisiEl.style.color = kondisi === 'Baik' ? '#1fcf8e' : '#e53e3e';
 
-    // Denda
     const dendaEl  = document.getElementById('modal-denda');
     const dendaNum = parseInt(denda) || 0;
     dendaEl.textContent = 'Rp ' + dendaNum.toLocaleString('id-ID');
@@ -320,18 +388,7 @@ function bukaModalRiwayat(judul, penulis, kategori, libId, trxId, peminjam,
     badge.style.background = s.bg;
     badge.style.color      = s.color;
 
-    //  Update cover di modal
-    const coverEl = document.getElementById('modal-cover-riwayat');
-    if (coverUrl && coverUrl !== '') {
-        coverEl.innerHTML         = '<img src="' + coverUrl + '" style="width:100%;height:100%;object-fit:cover;">';
-        coverEl.style.background  = 'none';
-        coverEl.style.boxShadow   = 'none';
-    } else {
-        coverEl.style.background  = 'linear-gradient(145deg, #3aaea0, #2e7d7d)';
-        coverEl.style.boxShadow   = '0 4px 14px rgba(46,125,125,0.3)';
-        coverEl.innerHTML         = '<i class="fa-solid fa-book" style="color:rgba(255,255,255,0.75);font-size:22px;"></i>';
-    }
-
+    // Tampilkan Modal
     document.getElementById('modal-riwayat').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
@@ -342,6 +399,50 @@ function tutupModalRiwayat(event) {
         document.body.style.overflow = '';
     }
 }
+
+function tutupModalRiwayat(event) {
+        if (event.target === document.getElementById('modal-riwayat')) {
+            document.getElementById('modal-riwayat').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    // ==========================================
+    // FUNGSI COPY OTP (PASTE DI SINI)
+    // ==========================================
+    function copyOtpRiwayat() {
+        // 1. Ambil teks OTP
+        const otpCode = document.getElementById('modal-otp').innerText.trim();
+
+        // 2. Buat elemen input sementara (tidak terlihat) untuk menampung teks
+        const tempInput = document.createElement("input");
+        tempInput.value = otpCode;
+        document.body.appendChild(tempInput);
+
+        // 3. Sorot (select) dan jalankan perintah copy bawaan browser
+        tempInput.select();
+        tempInput.setSelectionRange(0, 99999); // Untuk kompatibilitas HP/Mobile
+        document.execCommand("copy");
+
+        // 4. Hapus kembali elemen sementaranya agar bersih
+        document.body.removeChild(tempInput);
+
+        // 5. Berikan efek visual tombol berhasil ditekan (Warna solid & Centang)
+        const btn = document.getElementById('btn-copy-otp');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+        btn.style.background = '#1fcf8e';
+        btn.style.color = 'white';
+
+        // 6. Kembalikan ke wujud awal setelah 2 detik
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+            btn.style.background = 'white';
+            btn.style.color = '#1fcf8e';
+        }, 2000);
+    }
 </script>
+</script>
+
+
 
 @endsection

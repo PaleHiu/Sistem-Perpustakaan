@@ -62,22 +62,33 @@
     <div style="width:260px;flex-shrink:0;">
         <div style="background:white;border-radius:15px;padding:25px 20px;border:1px solid #edf2f7;text-align:center;">
             
-            <div style="position:relative;width:80px;margin:0 auto 15px;">
+            {{-- FORM KHUSUS UPLOAD FOTO PROFIL--}}
+            <form id="form-avatar" method="POST" action="{{ route('member.profil.avatar') }}" enctype="multipart/form-data" style="display:none;">
+                @csrf
+                <input type="file" id="input-foto-profil-independent" name="foto_profil" accept="image/jpg,image/jpeg,image/png" onchange="document.getElementById('form-avatar').submit()">
+            </form>
+
+            {{-- WADAH FOTO PROFIL INTERAKTIF --}}
+            <label for="input-foto-profil-independent"
+                   onmouseenter="document.getElementById('avatar-overlay').style.opacity='1'"
+                   onmouseleave="document.getElementById('avatar-overlay').style.opacity='0'"
+                   style="position:relative; width:90px; height:90px; margin:0 auto 15px; display:block; cursor:pointer; border-radius:50%; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.1); border:3px solid white; transition:transform 0.2s;">
+
+                {{-- Gambar Asli / Inisial --}}
                 @if($anggota?->foto_profil)
-                    <img src="{{ asset('storage/' . $anggota->foto_profil) }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">
+                    <img src="{{ asset('storage/' . $anggota->foto_profil) }}" style="width:100%; height:100%; object-fit:cover; display:block;">
                 @else
-                    <div style="width:80px;height:80px;background:#1fcf8e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:white;">
+                    <div style="width:100%; height:100%; background:#1fcf8e; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; color:white;">
                         {{ $inisial ?: 'U' }}
                     </div>
                 @endif
-                
-                @if(!$isPending)
-                <label for="input-foto-profil" id="camera-icon-wrapper"
-                       style="display:{{ $isIncomplete ? 'flex' : 'none' }}; position:absolute;bottom:0;right:0;width:26px;height:26px;background:#1fcf8e;border-radius:50%;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;">
-                    <i class="fa-solid fa-camera" style="font-size:11px;color:white;"></i>
-                </label>
-                @endif
-            </div>
+
+                {{-- Overlay Gelap & Ikon Kamera --}}
+                <div id="avatar-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.55); display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;">
+                    <i class="fa-solid fa-camera" style="color:white; font-size:22px; margin-bottom:4px;"></i>
+                    <span style="color:white; font-size:10px; font-weight:600; letter-spacing:0.5px;">UBAH FOTO</span>
+                </div>
+            </label>
 
             <h3 style="font-size:17px;font-weight:700;color:#2d3748;margin-bottom:4px;">
                 {{ $namaLengkap ?: 'Nama belum diisi' }}
@@ -197,26 +208,35 @@
                 </div>
                 @endif
 
-                <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:25px;">
-                    <div style="flex:1;min-width:200px;max-width:280px;">
+                <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;margin-bottom:25px;background:#f8fafc;padding:20px;border-radius:12px;border:1px solid #edf2f7;">
+                    
+                    {{-- KOLOM KIRI (Preview Gambar) --}}
+                    <div style="flex-shrink:0;width:180px;">
                         @if($anggota?->dokumen_identitas)
-                            <a href="{{ asset('storage/' . $anggota->dokumen_identitas) }}" target="_blank">
-                                <img src="{{ asset('storage/' . $anggota->dokumen_identitas) }}" alt="Dokumen" style="width:100%;border-radius:10px;border:2px solid #1fcf8e;object-fit:cover;">
+                            <a href="{{ url('/private/dokumen/' . basename($anggota->dokumen_identitas)) }}" target="_blank" 
+                               style="display:block;border-radius:10px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.05);border:2px solid white;transition:transform 0.2s;">
+                                <img src="{{ url('/private/dokumen/' . basename($anggota->dokumen_identitas)) }}" alt="Dokumen" 
+                                     style="width:100%;height:115px;object-fit:cover;display:block;">
                             </a>
                         @else
-                            <div style="width:100%;height:130px;border-radius:10px;border:2px dashed #cbd5e0;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
-                                <i class="fa-regular fa-image" style="font-size:28px;color:#cbd5e0;"></i>
-                                <p style="font-size:12px;color:#a0aec0;">Belum ada dokumen</p>
+                            <div style="width:100%;height:115px;border-radius:10px;border:2px dashed #cbd5e0;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+                                <i class="fa-regular fa-id-card" style="font-size:26px;color:#cbd5e0;"></i>
+                                <p style="font-size:11px;color:#a0aec0;font-weight:500;">Belum ada</p>
                             </div>
                         @endif
                     </div>
-                    <div style="flex:1;min-width:200px;">
-                        <label style="font-size:13px;color:#4a5568;font-weight:500;display:block;margin-bottom:8px;">
+
+                    {{-- KOLOM KANAN (Form Upload) --}}
+                    <div style="flex:1;min-width:250px;">
+                        <label style="font-size:16px;color:#4a5568;font-weight:600;display:block;margin-bottom:8px;">
                             {{ $anggota?->dokumen_identitas ? 'Ganti Dokumen' : 'Unggah Dokumen' }}
                         </label>
                         <input type="file" name="dokumen_identitas" class="locked-input" accept=".jpg,.jpeg,.png,.pdf" {{ $isIncomplete ? '' : 'disabled' }}
-                               style="width:100%;padding:10px;border:1px dashed #cbd5e0;border-radius:8px;font-size:13px;background:{{ $isIncomplete ? '#fafafa' : '#e2e8f0' }};cursor:{{ $isIncomplete ? 'pointer' : 'not-allowed' }};">
-                        <p style="font-size:11px;color:#a0aec0;margin-top:6px;">Format: JPG, PNG, PDF. Maks 2MB.</p>
+                               style="width:100%;padding:12px;border:1px dashed #cbd5e0;border-radius:10px;font-size:13px;color:#4a5568;background:{{ $isIncomplete ? 'white' : '#e2e8f0' }};cursor:{{ $isIncomplete ? 'pointer' : 'not-allowed' }};transition:all 0.2s;">
+                        <p style="font-size:14px;color:#718096;margin-top:8px;line-height:1.5;">
+                            Format: <strong>JPG, PNG, PDF</strong>. Maksimal <strong>2MB</strong>.<br>
+                            Pastikan tulisan identitas terbaca dengan jelas untuk mempercepat verifikasi.
+                        </p>
                     </div>
                 </div>
 
@@ -407,6 +427,18 @@ document.getElementById("modal_password_input").addEventListener("keypress", fun
     verifyPasswordAndUnlock();
   }
 });
+
+function handleAvatarClick(event) {
+    const fileInput = document.getElementById('input-foto-profil');
+    
+    // Jika input masih dikunci (form belum di-unlock), cegah file explorer terbuka
+    if (fileInput.disabled) {
+        event.preventDefault();
+        // Buka modal password untuk memverifikasi keamanan terlebih dahulu
+        openPasswordModal();
+    }
+    // Jika form sudah di-unlock, file explorer akan otomatis terbuka berkat tag <label>
+}
 </script>
 
 @endsection

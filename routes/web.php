@@ -258,6 +258,46 @@ Route::get('/members', function () {
     return view('members', compact('members'));
 })->middleware(['auth'])->name('members.index');
 
+Route::get('/private/dokumen/{filename}', function ($filename) {
+    $user = \Illuminate\Support\Facades\Auth::user();
+    
+    // 1. Validasi Kepemilikan (Petugas atau Pemilik Asli)
+    $isPetugas = $user->role === 'Petugas';
+    $isOwner   = $user->anggota && basename($user->anggota->dokumen_identitas) === $filename;
+
+    if (!$isPetugas && !$isOwner) {
+        abort(403, 'Akses Ditolak! Anda tidak memiliki izin.');
+    }
+    
+    // 2. RADAR PENCARI FILE (Mencakup Arsitektur Laravel 11 & Versi Lama)
+    $paths = [
+        storage_path('app/private/dokumen_identitas/' . $filename), // [PRIORITAS] Lokasi upload baru Laravel 11
+        storage_path('app/dokumen_identitas/' . $filename),         // Lokasi file lama yang dipindah manual
+        storage_path('app/public/dokumen_identitas/' . $filename)   // Lokasi darurat jika fallback ke public
+    ];
+    
+    $fileLengkap = null;
+    foreach ($paths as $path) {
+        if (file_exists($path)) {
+            $fileLengkap = $path;
+            break; // Berhenti mencari jika file sudah ditemukan
+        }
+    }
+    
+    // 3. Jika di ketiga tempat tidak ada, berarti file memang rusak/hilang
+    if (!$fileLengkap) {
+        abort(404, 'Dokumen identitas tidak ditemukan di server.');
+    }
+    
+    // 4. Paksa browser merender file sebagai gambar (bukan didownload)
+    $mimeType = \Illuminate\Support\Facades\File::mimeType($fileLengkap);
+    return response()->file($fileLengkap, [
+        'Content-Type'  => $mimeType,
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+
+})->where('filename', '.*')->middleware(['auth'])->name('private.dokumen');
+
 Route::delete('/members/{id}', function ($id) {
     if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
     
@@ -268,7 +308,7 @@ Route::delete('/members/{id}', function ($id) {
         \Illuminate\Support\Facades\Storage::disk('public')->delete($anggota->foto_profil);
     }
     if ($anggota->dokumen_identitas) {
-        \Illuminate\Support\Facades\Storage::disk('public')->delete($anggota->dokumen_identitas);
+        \Illuminate\Support\Facades\Storage::disk('local')->delete($anggota->dokumen_identitas);
     }
     
     // 2. HAPUS DATA DATABASE
@@ -335,15 +375,25 @@ Route::post('/borrowing/{id}/validasi', function (\Illuminate\Http\Request $requ
         ->with('success', 'OTP valid! Peminjaman dikonfirmasi. Durasi: ' . $durasiHari . ' hari (Level ' . $level . ')');
 })->middleware(['auth'])->name('borrowing.validasi');
 
-Route::post('/borrowing/{id}/kembalikan', function ($id) {
+Route::post('/borrowing/{id}/kembalikan', function (\Illuminate\Http\Request $request, $id) {
+    // 1. Keamanan Role
     if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
 
     $peminjaman = \App\Models\Peminjam::with('detailPeminjaman.buku')->findOrFail($id);
 
+    // ==========================================
+    // 2. VALIDASI KECOCOKAN OTP (Fitur Baru)
+    // ==========================================
+    if (strtoupper(trim($request->otp_pengembalian)) !== strtoupper($peminjaman->kode_otp)) {
+        return redirect()->route('borrowing.index')->with('error_otp', 'Gagal! Kode OTP Pengembalian salah atau tidak cocok.');
+    }
+
+    // 3. Pengecekan Status Transaksi
     if ($peminjaman->status_transaksi !== 'Dipinjam') {
         return redirect()->route('borrowing.index')->with('error_otp', 'Transaksi ini tidak dalam status Dipinjam!');
     }
 
+    // 4. Kalkulasi Denda (Logika Asli Anda)
     $today      = now()->toDateString();
     $batas      = $peminjaman->batas_pengembalian;
     $jumlahBuku = $peminjaman->detailPeminjaman->count();
@@ -354,19 +404,22 @@ Route::post('/borrowing/{id}/kembalikan', function ($id) {
         $totalDenda    = $hariTerlambat * 1000 * $jumlahBuku;
     }
 
+    // 5. Eksekusi Penyelesaian Transaksi
     $peminjaman->update([
         'status_transaksi'     => 'Selesai',
         'tanggal_dikembalikan' => $today,
         'total_denda'          => $totalDenda,
     ]);
 
+    // 6. Kembalikan Stok Buku ke Katalog
     foreach ($peminjaman->detailPeminjaman as $detail) {
         if ($detail->buku) $detail->buku->increment('stok_tersedia');
     }
 
+    // 7. Siapkan Pesan Berhasil
     $pesan = $totalDenda > 0
-        ? 'Buku berhasil dikembalikan. Denda: Rp ' . number_format($totalDenda, 0, ',', '.')
-        : 'Buku berhasil dikembalikan. Tidak ada denda.';
+        ? 'Verifikasi OTP berhasil! Buku dikembalikan. Denda: Rp ' . number_format($totalDenda, 0, ',', '.')
+        : 'Verifikasi OTP berhasil! Buku dikembalikan. Tidak ada denda.';
 
     return redirect()->route('borrowing.index')->with('success', $pesan);
 })->middleware(['auth'])->name('borrowing.kembalikan');
@@ -572,6 +625,36 @@ Route::get('/member/profil', function () {
     return view('profil');
 })->middleware(['auth', 'verified'])->name('member.profil');
 
+Route::post('/member/profil/avatar', function (\Illuminate\Http\Request $request) {
+    if (\Illuminate\Support\Facades\Auth::user()->role !== 'Member') return redirect()->route('dashboard');
+
+    $request->validate([
+        'foto_profil' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+    $anggota = \Illuminate\Support\Facades\Auth::user()->anggota;
+    
+    // Fallback aman jika data anggota belum ada
+    if (!$anggota) {
+        $anggota = \App\Models\Anggota::create([
+            'user_id' => \Illuminate\Support\Facades\Auth::user()->id,
+            'status_verifikasi' => 'Incomplete'
+        ]);
+    }
+
+    $fotoProfil = $anggota->foto_profil;
+
+    // Simpan ke folder public karena foto profil aman untuk publik
+    if ($request->hasFile('foto_profil')) {
+        if ($fotoProfil) \Illuminate\Support\Facades\Storage::disk('public')->delete($fotoProfil);
+        $fotoProfil = $request->file('foto_profil')->store('foto_profil', 'public');
+    }
+
+    $anggota->update(['foto_profil' => $fotoProfil]);
+
+    return back()->with('success', 'Foto profil berhasil diperbarui!');
+})->middleware(['auth', 'verified'])->name('member.profil.avatar');
+
 Route::post('/member/profil/update', function (\Illuminate\Http\Request $request) {
     if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
 
@@ -628,8 +711,8 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
     $ubahStatusVerif  = false;
     
     if ($request->hasFile('dokumen_identitas')) {
-        if ($dokumenIdentitas) \Illuminate\Support\Facades\Storage::disk('public')->delete($dokumenIdentitas);
-        $dokumenIdentitas = $request->file('dokumen_identitas')->store('dokumen_identitas', 'public');
+        if ($dokumenIdentitas) \Illuminate\Support\Facades\Storage::disk('local')->delete($dokumenIdentitas);
+        $dokumenIdentitas = $request->file('dokumen_identitas')->store('dokumen_identitas', 'local');
         $ubahStatusVerif  = true;
     }
 
@@ -691,12 +774,6 @@ Route::get('/member/peminjaman/{id}/otp', function ($id) {
 // ROUTE PROFIL BAWAAN BREEZE
 // ============================================
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
 
 Route::delete('/member/profil/hapus', function (\Illuminate\Http\Request $request) {
     if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
@@ -715,7 +792,7 @@ Route::delete('/member/profil/hapus', function (\Illuminate\Http\Request $reques
     // Hapus file dokumen dan foto jika ada sebelum menghapus data DB (Opsional tapi baik untuk kebersihan storage)
     if ($user->anggota) {
         if ($user->anggota->foto_profil) \Illuminate\Support\Facades\Storage::disk('public')->delete($user->anggota->foto_profil);
-        if ($user->anggota->dokumen_identitas) \Illuminate\Support\Facades\Storage::disk('public')->delete($user->anggota->dokumen_identitas);
+        if ($user->anggota->dokumen_identitas) \Illuminate\Support\Facades\Storage::disk('local')->delete($user->anggota->dokumen_identitas);
     }
 
     Auth::logout();
@@ -734,5 +811,21 @@ Route::post('/member/profil/verify-password', function (\Illuminate\Http\Request
     $valid = \Illuminate\Support\Facades\Hash::check($request->password, Auth::user()->password);
     return response()->json(['valid' => $valid]);
 })->middleware(['auth', 'verified'])->name('member.profil.verify-password');
+
+// ============================================
+// FALLBACK ROUTE (PENCEGAH KETIK URL NGAWUR)
+// ============================================
+
+Route::fallback(function () {
+    // Jika user sudah login tapi mengetik URL yang tidak ada
+    if (\Illuminate\Support\Facades\Auth::check()) {
+        return \Illuminate\Support\Facades\Auth::user()->role === 'Petugas' 
+            ? redirect()->route('dashboard') 
+            : redirect()->route('member.dashboard');
+    }
+    
+    // Jika belum login dan iseng mengetik URL aneh
+    return redirect()->route('landing');
+});
 
 require __DIR__.'/auth.php';

@@ -4,6 +4,38 @@
 
 @section('content')
 
+<style>
+    /* Styling Modal & Animasi */
+    .sipus-modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(31, 60, 69, 0.75); /* Warna #1f3c45 transparan */
+        z-index: 9999; display: none; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.3s ease;
+    }
+    .sipus-modal-overlay.active { display: flex; opacity: 1; }
+    
+    .sipus-modal-content {
+        background: white; border-radius: 16px; width: 90%; max-width: 500px;
+        max-height: 80vh; display: flex; flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        transform: translateY(20px); transition: transform 0.3s ease;
+    }
+    .sipus-modal-overlay.active .sipus-modal-content { transform: translateY(0); }
+    
+    .sipus-modal-header {
+        padding: 20px 25px; border-bottom: 1px solid #edf2f7;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    
+    .sipus-modal-body { padding: 20px 25px; overflow-y: auto; flex: 1; }
+    
+    /* Kustomisasi Scrollbar agar Elegan */
+    .sipus-modal-body::-webkit-scrollbar { width: 6px; }
+    .sipus-modal-body::-webkit-scrollbar-track { background: #f7fafc; }
+    .sipus-modal-body::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 10px; }
+    .sipus-modal-body::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+</style>
+
 {{-- SEARCH & FILTER --}}
 <div style="background: white; padding: 15px 20px; border-radius: 15px; display: flex; align-items: center; gap: 15px; margin-bottom: 25px; border: 1px solid #edf2f7; flex-wrap: wrap;">
     <div style="position: relative; flex: 1; min-width: 220px;">
@@ -120,7 +152,10 @@
                 <p style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 3px;">
                     {{ $judulBuku }}
                     @if($jumlahBuku > 1)
-                        <span style="font-size: 12px; color: #718096; font-weight: 400;">+ {{ $jumlahBuku - 1 }} lainnya</span>
+                        <span onclick="openDetailModal('modal-trx-{{ $trx->id }}')" 
+                            style="font-size: 12px; color: #1fcf8e; font-weight: 600; cursor: pointer; margin-left: 5px; text-decoration: underline; text-underline-offset: 2px;">
+                            + {{ $jumlahBuku - 1 }} lainnya (Lihat Detail)
+                        </span>
                     @endif
                 </p>
                 <p style="font-size: 12px; color: #718096;">{{ $jumlahBuku }} Judul Buku</p>
@@ -203,6 +238,42 @@
     </div>
 
 </div>
+
+{{-- MODAL DETAIL BUKU (Hanya dirender jika buku > 1) --}}
+    @if($jumlahBuku > 1)
+    <div id="modal-trx-{{ $trx->id }}" class="sipus-modal-overlay" onclick="closeDetailModal(event, 'modal-trx-{{ $trx->id }}')">
+        <div class="sipus-modal-content">
+            <div class="sipus-modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; color: #2d3748; font-weight: 700;">Daftar Buku Dibooking</h3>
+                    <p style="margin: 4px 0 0; font-size: 12px; color: #718096;">TRX-{{ str_pad($trx->id, 4, '0', STR_PAD_LEFT) }}</p>
+                </div>
+                <button type="button" onclick="closeDetailModalBtn('modal-trx-{{ $trx->id }}')" style="background: none; border: none; font-size: 24px; color: #a0aec0; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            <div class="sipus-modal-body">
+                @foreach($trx->detailPeminjaman as $detail)
+                    <div style="display: flex; gap: 15px; padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px dashed #e2e8f0; {{ $loop->last ? 'border-bottom: none; margin-bottom: 0; padding-bottom: 0;' : '' }}">
+                        @if($detail->buku?->cover)
+                            <img src="{{ asset('storage/' . $detail->buku->cover) }}" style="width: 60px; height: 85px; object-fit: cover; border-radius: 8px; border: 1px solid #edf2f7;">
+                        @else
+                            <div style="width: 60px; height: 85px; background: linear-gradient(135deg, #1f3c45, #2d6a5a); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-book" style="color: rgba(255,255,255,0.6); font-size: 20px;"></i>
+                            </div>
+                        @endif
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 5px 0; font-size: 14px; color: #2d3748; font-weight: 600; line-height: 1.4;">{{ $detail->buku->judul ?? 'Judul Tidak Diketahui' }}</h4>
+                            <p style="margin: 0 0 3px 0; font-size: 12px; color: #718096;"><i class="fa-solid fa-user-pen" style="width: 15px; text-align: center;"></i> {{ $detail->buku->penulis ?? '-' }}</p>
+                            <p style="margin: 0; font-size: 12px; color: #718096;"><i class="fa-solid fa-layer-group" style="width: 15px; text-align: center;"></i> {{ $detail->buku->kategori->nama_kategori ?? '-' }}</p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+</div> {{-- Penutup asli dari div class="card-peminjaman" --}}
+
 @empty
 <div style="background: white; border-radius: 15px; padding: 40px; text-align: center; border: 1px solid #edf2f7;">
     <i class="fa-regular fa-folder-open" style="font-size: 40px; color: #e2e8f0; margin-bottom: 12px; display: block;"></i>
@@ -237,6 +308,24 @@ function filterPeminjaman() {
         card.style.display = cocok ? '' : 'none';
     });
 }
+</script>
+
+<script>
+    // FUNGSI UNTUK MODAL DETAIL BUKU
+    function openDetailModal(id) {
+        document.getElementById(id).classList.add('active');
+        document.body.style.overflow = 'hidden'; // Kunci scroll halaman utama
+    }
+    function closeDetailModalBtn(id) {
+        document.getElementById(id).classList.remove('active');
+        document.body.style.overflow = 'auto'; // Kembalikan scroll
+    }
+    function closeDetailModal(event, id) {
+        if (event.target.id === id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+    }
 </script>
 
 @endsection
