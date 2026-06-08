@@ -30,33 +30,46 @@ class RegisteredUserController extends Controller
      * @throws \Illuminate\Validation\ValidationException
      */
 public function store(Request $request): RedirectResponse
-{
-    $request->validate([
-        'first_name' => ['required', 'string', 'max:255'],
-        'last_name' => ['required', 'string', 'max:255'],
-        'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-        'password' => ['required', 'confirmed', Rules\Password::defaults()],
-    ]);
+    {
+        $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name'  => ['required', 'string', 'max:255'],
+            
+            // 1. Tambahkan 'ends_with:@gmail.com' pada array email
+            'email'      => [
+                'required', 
+                'string', 
+                'lowercase', 
+                'email', 
+                'max:255', 
+                'ends_with:@gmail.com', 
+                'unique:'.User::class
+            ],
+            'password'   => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            // 2. Tambahkan pesan error kustom (bahasa Indonesia)
+            'email.ends_with' => 'Keamanan sistem: Pendaftaran hanya diizinkan menggunakan alamat @gmail.com.'
+        ]);
 
-    // 1. Simpan akun login
-    $user = User::create([
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'role' => 'Member',
-    ]);
+        // 1. Simpan akun login
+        $user = User::create([
+            'email'    => $request->email,
+            'password' => Hash::make($request->password),
+            'role'     => 'Member',
+        ]);
 
-    // 2. Simpan nama ke profil anggota
-    Anggota::create([
-        'user_id' => $user->id,
-        'nama_lengkap' => $request->first_name . ' ' . $request->last_name,
-        'status_verifikasi' => 'Incomplete', // Menjaga konsistensi status awal
-    ]);
+        // 2. Simpan nama ke profil anggota
+        Anggota::create([
+            'user_id'           => $user->id,
+            'nama_lengkap'      => $request->first_name . ' ' . $request->last_name,
+            'status_verifikasi' => 'Incomplete', // Menjaga konsistensi status awal
+        ]);
 
-    event(new Registered($user));
+        event(new Registered($user));
 
-    Auth::login($user);
+        Auth::login($user);
 
-    // 3. Arahkan ke halaman Dashboard Member (Ganti dari 'katalog')
-    return redirect()->route('member.dashboard'); 
-}
+        // 3. Arahkan ke halaman Dashboard Member
+        return redirect()->route('member.dashboard'); 
+    }
 }

@@ -267,14 +267,29 @@
             </form>
             <p style="text-align:center;font-size:11px;color:#a0aec0;">*Sistem akan mencatat tanggal pinjam hari ini</p>
         </div>
-        <div id="kembalikan-section" style="display:none;">
-            <form id="form-kembalikan" method="POST">
-                @csrf
-                <button type="button" onclick="konfirmasiKembalikan()"
-                        style="width:100%;padding:15px;background:#3182ce;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px;">
-                    <i class="fa-solid fa-rotate-left"></i> Proses Pengembalian Buku
-                </button>
-            </form>
+<div id="kembalikan-section" style="display:none;">
+            <!-- TOMBOL AWAL (Pemicu) -->
+            <button type="button" id="btn-tampilkan-otp-kembali" onclick="tampilkanInputOtpKembali()"
+                    style="width:100%;padding:15px;background:#3182ce;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px;">
+                <i class="fa-solid fa-rotate-left"></i> Proses Pengembalian Buku
+            </button>
+
+            <!-- AREA INPUT OTP (Muncul setelah tombol diklik) -->
+            <div id="area-input-otp-kembali" style="display:none; background:#ebf8ff; border:2px dashed #3182ce; border-radius:12px; padding:20px; text-align:center; margin-bottom:15px;">
+                <p style="font-size:11px;font-weight:700;color:#3182ce;letter-spacing:0.1em;margin-bottom:14px;">INPUT OTP DARI MEMBER</p>
+                <form id="form-kembalikan" method="POST">
+                    @csrf
+                    <input type="text" name="otp_pengembalian" id="input-otp-kembali" maxlength="6" placeholder="Ketik 6 digit OTP"
+                        style="width:220px;height:56px;text-align:center;border-radius:10px;border:2px solid #90cdf4;font-size:26px;font-weight:800;color:#1a202c;outline:none;background:white;letter-spacing:8px;text-transform:uppercase;font-family:monospace;margin-bottom:15px;"
+                        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+                    
+                    <button type="button" onclick="konfirmasiKembalikanFinal()"
+                            style="width:100%;padding:15px;background:#3182ce;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">
+                        <i class="fa-solid fa-check"></i> Konfirmasi & Selesaikan
+                    </button>
+                </form>
+            </div>
+            
             <p style="text-align:center;font-size:11px;color:#a0aec0;">*Stok buku akan bertambah setelah pengembalian dikonfirmasi</p>
         </div>
         <div id="btn-tutup-saja" style="display:none;text-align:right;">
@@ -316,6 +331,10 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
     }
     document.getElementById('form-validasi-otp').action = '/borrowing/' + borrowId + '/validasi';
     document.getElementById('form-kembalikan').action   = '/borrowing/' + borrowId + '/kembalikan';
+    // Reset tampilan area kembalikan
+    document.getElementById('btn-tampilkan-otp-kembali').style.display = 'flex';
+    document.getElementById('area-input-otp-kembali').style.display    = 'none';
+    document.getElementById('input-otp-kembali').value                 = '';
     document.getElementById('otp-section').style.display        = 'none';
     document.getElementById('kembalikan-section').style.display = 'none';
     document.getElementById('btn-tutup-saja').style.display     = 'none';
@@ -368,11 +387,30 @@ function konfirmasiOTP() {
     document.getElementById('input-otp-hidden').value = otp;
     document.getElementById('form-validasi-otp').submit();
 }
-function konfirmasiKembalikan() {
-    if (confirm('Konfirmasi pengembalian buku ini?\n\nPastikan buku sudah diterima secara fisik.')) {
+
+function tampilkanInputOtpKembali() {
+    document.getElementById('btn-tampilkan-otp-kembali').style.display = 'none';
+    const areaOtp = document.getElementById('area-input-otp-kembali');
+    areaOtp.style.display = 'block';
+    
+    // Beri sedikit waktu untuk render, lalu fokuskan kursor ke kotak input
+    setTimeout(() => document.getElementById('input-otp-kembali').focus(), 100);
+}
+
+// Fungsi validasi final sebelum dikirim ke web.php
+function konfirmasiKembalikanFinal() {
+    const otp = document.getElementById('input-otp-kembali').value.trim();
+    if (otp.length < 6) { 
+        alert('Masukkan kode OTP pengembalian secara lengkap (6 karakter)!'); 
+        return; 
+    }
+    
+    if (confirm('Verifikasi OTP ini dan selesaikan transaksi?')) {
         document.getElementById('form-kembalikan').submit();
     }
 }
+
+
 function filterTabel() {
     const keyword = document.getElementById('searchInput').value.toLowerCase();
     const status  = document.getElementById('filterStatus').value;

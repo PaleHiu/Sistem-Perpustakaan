@@ -124,7 +124,7 @@
                                 '{{ addslashes($member->alamat ?? '-') }}',
                                 '{{ $member->status_verifikasi ?? 'Incomplete' }}',
                                 {{ $member->id }},
-                                '{{ $member->dokumen_identitas ? asset('storage/' . $member->dokumen_identitas) : '' }}',
+                                '{{ $member->dokumen_identitas ? url('/private/dokumen/' . basename($member->dokumen_identitas)) : '' }}',
                                 '{{ $member->foto_profil ? asset('storage/' . $member->foto_profil) : '' }}'
                             )"><i class="fa-solid fa-eye"></i></a>
                             <a href="#" class="action-icon" title="Hapus" style="color:#e53e3e;margin-left:8px;"

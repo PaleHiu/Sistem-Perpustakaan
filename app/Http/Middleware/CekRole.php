@@ -11,12 +11,22 @@ class CekRole
 {
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        // Jika belum login, atau rolenya tidak sesuai dengan yang diminta route
-        if (!Auth::check() || Auth::user()->role !== $role) {
-            // Lempar ke halaman landing (atau bisa dikustomisasi ke halaman 403 Forbidden)
-            return redirect('/landing'); 
+        // 1. Jika belum login, arahkan ke landing page
+        if (!Auth::check()) {
+            return redirect('/landing');
         }
 
+        // 2. Jika Role tidak sesuai dengan yang diminta oleh Route
+        if (Auth::user()->role !== $role) {
+            // Evaluasi siapa pelakunya, lalu arahkan ke "rumah" masing-masing
+            if (Auth::user()->role === 'Petugas') {
+                return redirect()->route('dashboard')->with('warning', 'Akses ditolak! Anda mencoba memasuki area khusus Member.');
+            } else {
+                return redirect()->route('member.dashboard')->with('warning', 'Akses ditolak! Halaman ini dikhususkan untuk Petugas/Admin.');
+            }
+        }
+
+        // 3. Jika aman dan sesuai, persilakan masuk
         return $next($request);
     }
 }
