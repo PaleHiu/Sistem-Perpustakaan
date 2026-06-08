@@ -262,13 +262,26 @@ Route::delete('/members/{id}', function ($id) {
     if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
     
     $anggota = \App\Models\Anggota::findOrFail($id);
-    if ($anggota->user_id) {
-        \App\Models\User::find($anggota->user_id)?->delete();
+    
+    // 1. HAPUS FILE FISIK SAMPAI KE AKAR (FOTO & DOKUMEN)
+    if ($anggota->foto_profil) {
+        \Illuminate\Support\Facades\Storage::disk('public')->delete($anggota->foto_profil);
+    }
+    if ($anggota->dokumen_identitas) {
+        \Illuminate\Support\Facades\Storage::disk('public')->delete($anggota->dokumen_identitas);
     }
     
-    $anggota->delete();
+    // 2. HAPUS DATA DATABASE
+    if ($anggota->user_id) {
+        // Jika kita menghapus User, maka tabel Anggota, Keranjang, dan Peminjaman 
+        // akan OTOMATIS terhapus HANYA JIKA migrationnya menggunakan onDelete('cascade')
+        \App\Models\User::find($anggota->user_id)?->delete();
+    } else {
+        // Fallback jika anomali akun tidak punya user_id
+        $anggota->delete();
+    }
     
-    return redirect()->route('members.index')->with('success', 'Anggota berhasil dihapus!');
+    return redirect()->route('members.index')->with('success', 'Akun member, foto, dokumen, dan seluruh datanya berhasil dihapus permanen!');
 })->middleware(['auth'])->name('members.destroy');
 
 Route::patch('/members/{id}/verify', function (\Illuminate\Http\Request $request, $id) {
@@ -562,30 +575,64 @@ Route::get('/member/profil', function () {
 Route::post('/member/profil/update', function (\Illuminate\Http\Request $request) {
     if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
 
-    $request->validate([
+    $anggota = Auth::user()->anggota;
+
+    if ($anggota && $anggota->status_verifikasi === 'Pending') {
+        return redirect()->route('member.profil')->with('error', 'Data Anda sedang diverifikasi. Anda tidak dapat mengubah data saat ini.');
+    }
+
+    // CEK APAKAH INI PENGISIAN PERTAMA KALI (Incomplete)
+    $isFirstTime = !$anggota || $anggota->status_verifikasi === 'Incomplete';
+
+    // ATURAN VALIDASI DASAR
+    $rules = [
         'nama_lengkap'      => 'required|string|max:255',
-        'no_hp'             => 'nullable|string|max:15',
         'alamat'            => 'nullable|string',
-        'nik'               => 'nullable|string|max:16|unique:anggota,nik,' . Auth::user()->anggota?->id,
+        'nik'               => [
+            'nullable', 'string', 'max:16',
+            \Illuminate\Validation\Rule::unique('anggota', 'nik')->ignore($anggota?->id)
+        ],
+        'no_hp'             => [
+            'nullable', 'string', 'max:15',
+            \Illuminate\Validation\Rule::unique('anggota', 'no_hp')->ignore($anggota?->id)
+        ],
         'foto_profil'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         'dokumen_identitas' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+    ];
+
+    // JIKA BUKAN PENGISIAN PERTAMA (Berarti Edit), MAKA PASSWORD WAJIB!
+    if (!$isFirstTime) {
+        $rules['password_konfirmasi'] = 'required|string';
+    }
+
+    $request->validate($rules, [
+        'password_konfirmasi.required' => 'Password wajib diisi untuk menyimpan perubahan.',
+        'nik.unique'   => 'NIK ini sudah terdaftar pada akun lain.',
+        'no_hp.unique' => 'Nomor HP ini sudah digunakan.',
     ]);
 
-    $fotoProfil = Auth::user()->anggota?->foto_profil;
+    // JIKA BUKAN PENGISIAN PERTAMA, COCOKKAN PASSWORDNYA
+    if (!$isFirstTime) {
+        if (!\Illuminate\Support\Facades\Hash::check($request->password_konfirmasi, Auth::user()->password)) {
+            return back()->with('error', 'Password konfirmasi salah! Perubahan dibatalkan.');
+        }
+    }
+
+    $fotoProfil = $anggota?->foto_profil;
     if ($request->hasFile('foto_profil')) {
         if ($fotoProfil) \Illuminate\Support\Facades\Storage::disk('public')->delete($fotoProfil);
         $fotoProfil = $request->file('foto_profil')->store('foto_profil', 'public');
     }
 
-    $dokumenIdentitas = Auth::user()->anggota?->dokumen_identitas;
+    $dokumenIdentitas = $anggota?->dokumen_identitas;
     $ubahStatusVerif  = false;
+    
     if ($request->hasFile('dokumen_identitas')) {
         if ($dokumenIdentitas) \Illuminate\Support\Facades\Storage::disk('public')->delete($dokumenIdentitas);
         $dokumenIdentitas = $request->file('dokumen_identitas')->store('dokumen_identitas', 'public');
         $ubahStatusVerif  = true;
     }
 
-    $anggota    = Auth::user()->anggota;
     $statusBaru = $ubahStatusVerif ? 'Pending' : ($anggota?->status_verifikasi ?? 'Incomplete');
 
     if ($anggota) {
@@ -593,7 +640,7 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
             'nama_lengkap'      => $request->nama_lengkap,
             'no_hp'             => $request->no_hp,
             'alamat'            => $request->alamat,
-            'nik'               => $request->nik,
+            'nik'               => $anggota->nik ?: $request->nik, // Kunci permanen NIK jika sudah ada
             'foto_profil'       => $fotoProfil,
             'dokumen_identitas' => $dokumenIdentitas,
             'status_verifikasi' => $statusBaru,
@@ -607,7 +654,7 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
             'nik'               => $request->nik,
             'foto_profil'       => $fotoProfil,
             'dokumen_identitas' => $dokumenIdentitas,
-            'status_verifikasi' => 'Pending',
+            'status_verifikasi' => $ubahStatusVerif ? 'Pending' : 'Incomplete',
         ]);
     }
 
@@ -649,5 +696,43 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+
+Route::delete('/member/profil/hapus', function (\Illuminate\Http\Request $request) {
+    if (Auth::user()->role !== 'Member') return redirect()->route('dashboard');
+
+    $request->validate([
+        'password_hapus' => 'required|string',
+    ]);
+
+    // Verifikasi password sebelum menghapus
+    if (!\Illuminate\Support\Facades\Hash::check($request->password_hapus, Auth::user()->password)) {
+        return back()->with('error_password', 'Password salah! Akun gagal dihapus.')->withInput();
+    }
+
+    $user = Auth::user();
+    
+    // Hapus file dokumen dan foto jika ada sebelum menghapus data DB (Opsional tapi baik untuk kebersihan storage)
+    if ($user->anggota) {
+        if ($user->anggota->foto_profil) \Illuminate\Support\Facades\Storage::disk('public')->delete($user->anggota->foto_profil);
+        if ($user->anggota->dokumen_identitas) \Illuminate\Support\Facades\Storage::disk('public')->delete($user->anggota->dokumen_identitas);
+    }
+
+    Auth::logout();
+    $user->delete(); // Akan otomatis menghapus anggota juga karena constraint onDelete('cascade') di database
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/landing')->with('success', 'Akun Anda telah berhasil dihapus secara permanen.');
+})->middleware(['auth', 'verified'])->name('member.profil.hapus');
+
+// Route Validasi Password via AJAX (Untuk Pop-up Edit Profil)
+Route::post('/member/profil/verify-password', function (\Illuminate\Http\Request $request) {
+    if (Auth::user()->role !== 'Member') return response()->json(['valid' => false], 403);
+    
+    $valid = \Illuminate\Support\Facades\Hash::check($request->password, Auth::user()->password);
+    return response()->json(['valid' => $valid]);
+})->middleware(['auth', 'verified'])->name('member.profil.verify-password');
 
 require __DIR__.'/auth.php';

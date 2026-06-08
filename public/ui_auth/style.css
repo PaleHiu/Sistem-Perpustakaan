@@ -8,6 +8,7 @@
 
 /* --- 1. BACKGROUND UTAMA (KONSTAN/DIAM) --- */
 body {
+    background-color: #0D1F2D;
     background-image: 
         linear-gradient(
             135deg, 
@@ -15,7 +16,7 @@ body {
             rgba(15, 30, 50, 0.7) 50%,  
             rgba(5, 15, 25, 0.95) 100%  
         ),
-        url('Background.jpg');
+        url('Background.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -144,7 +145,14 @@ body::before {
     
     /* ANIMASI MASUK: Muncul dari kanan */
     opacity: 0;
-    animation: slideInRight 1s cubic-bezier(0.25, 0.8, 0.25, 1) 0.6s forwards;
+    
+    /* Gunakan animasi baru dengan durasi 1.2 detik dan kurva perlambatan premium */
+    /* Delay 0.2s agar pengguna sempat melihat background dulu sesaat sebelum kartu muncul */
+    animation: floatUpPremium 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+    
+    /* Tambahan agar saat kartu diputar (rotateX), render pikselnya tidak pecah */
+    transform-style: preserve-3d;
+    will-change: transform, opacity, box-shadow;
 }
 
 /* STROKE CARD DIKEMBALIKAN DIAM (KIRI-KANAN SAJA) */
@@ -433,5 +441,27 @@ body::before {
     100% { 
         opacity: 1; 
         transform: none;
+    }
+}
+
+/* Animasi Professional: 3D Float Up */
+@keyframes floatUpPremium {
+    0% { 
+        opacity: 0; 
+        /* Mulai dari bawah, lebih kecil 5%, dan dimiringkan sedikit ke belakang (efek 3D) */
+        transform: perspective(1000px) translateY(70px) scale(0.95) rotateX(4deg);
+        /* Bayangan pendek/tipis karena kartu seolah-olah "jatuh" ke dasar */
+        box-shadow: 
+            0 5px 10px rgba(0, 0, 0, 0.1), 
+            inset 0 0 2px rgba(255, 255, 255, 0.05);
+    }
+    100% { 
+        opacity: 1; 
+        /* Kembali berdiri tegak presisi dan kembali ke ukuran asli */
+        transform: perspective(1000px) translateY(0) scale(1) rotateX(0deg);
+        /* Bayangan melebar lembut (blur 40px) seakan-akan kartu ini melayang menjauhi background */
+        box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.3),
+            inset 0 0 2px rgba(255, 255, 255, 0.15); 
     }
 }
