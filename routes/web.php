@@ -731,7 +731,7 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
             'nama_lengkap'      => $request->nama_lengkap,
             'no_hp'             => $request->no_hp,
             'alamat'            => $request->alamat,
-            'nik'               => $anggota->nik ?: $request->nik, // Kunci permanen NIK jika sudah ada
+            'nik'               => ($anggota->status_verifikasi === 'Rejected') ? $request->nik : ($anggota->nik ?: $request->nik), // Kunci permanen NIK jika sudah ada
             'foto_profil'       => $fotoProfil,
             'dokumen_identitas' => $dokumenIdentitas,
             'status_verifikasi' => $statusBaru,

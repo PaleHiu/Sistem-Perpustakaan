@@ -13,13 +13,15 @@
     // LOGIC STATUS & PENGUNCIAN FORM
     $statusVerif   = $anggota?->status_verifikasi ?? 'Incomplete';
     $isPending     = $statusVerif === 'Pending';
-    $isIncomplete  = $statusVerif === 'Incomplete';
+    
+    // Tambahkan status Rejected ke dalam kondisi ini agar form terbuka
+    $isIncomplete  = in_array($statusVerif, ['Incomplete', 'Rejected']);
     
     // Form dikunci HANYA JIKA statusnya sudah Approved/Rejected (bukan Incomplete & bukan Pending)
     $isLocked      = !$isIncomplete && !$isPending; 
     
     // Cek apakah NIK sudah pernah diisi
-    $hasNik        = !empty($anggota?->nik);
+    $hasNik        = !empty($anggota?->nik) && $statusVerif !== 'Rejected';
 @endphp
 
 {{-- NOTIFIKASI --}}
