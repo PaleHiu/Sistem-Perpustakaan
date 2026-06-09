@@ -11,7 +11,35 @@
         .form-label { font-size:11px;font-weight:700;letter-spacing:.08em;color:#a0aec0;text-transform:uppercase;display:block;margin-bottom:6px; }
         .form-input { width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;outline:none;transition:border-color .2s; }
         .form-input:focus { border-color:#1fcf8e;box-shadow:0 0 0 3px rgba(31,207,142,.15); }
-        #tabelBuku thead th { position: sticky; top: 0; background-color: white; z-index: 10; border-bottom: 2px solid #e2e8f0; }    
+        #tabelBuku thead th { position: sticky; top: 0; background-color: white; z-index: 10; border-bottom: 2px solid #e2e8f0; }  
+        
+        /* --- FIX PAGINATION LARAVEL --- */
+        .pagination-links svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .pagination-links nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Memperbaiki barisan angka dan panah agar menyamping rapi */
+        .pagination-links nav > div:not(:first-child) {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* (Opsional) Sembunyikan teks "Showing 1 to 5..." bawaan Laravel 
+        karena kamu sudah membuat teks "Menampilkan..." sendiri */
+        .pagination-links nav > div:first-child p,
+        .pagination-links .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
