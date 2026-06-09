@@ -593,12 +593,15 @@ Route::delete('/member/peminjaman/{id}/batal', function ($id) {
                     ->where('anggota_id', $anggota->id)
                     ->where('status_transaksi', 'Menunggu OTP')->firstOrFail();
 
-    foreach ($peminjaman->detailPeminjaman as $detail) {
-        if ($detail->buku) $detail->buku->increment('stok_tersedia');
-    }
-
-    $peminjaman->update(['status_transaksi' => 'Batal']);
-    return redirect()->route('member.peminjaman')->with('success', 'Booking berhasil dibatalkan.');
+    // Gunakan Transaction agar penambahan stok dan perubahan status terikat menjadi 1 kesatuan
+    \Illuminate\Support\Facades\DB::transaction(function () use ($peminjaman) {
+        foreach ($peminjaman->detailPeminjaman as $detail) {
+            if ($detail->buku) $detail->buku->increment('stok_tersedia');
+        }
+        $peminjaman->update(['status_transaksi' => 'Batal']);
+    });
+    
+    return redirect()->route('member.peminjaman')->with('success', 'Booking berhasil dibatalkan. Stok buku telah dikembalikan.');
 })->middleware(['auth', 'verified'])->name('member.peminjaman.batal');
 
 // Riwayat — blokir jika belum approved
@@ -664,8 +667,8 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
         return redirect()->route('member.profil')->with('error', 'Data Anda sedang diverifikasi. Anda tidak dapat mengubah data saat ini.');
     }
 
-    // CEK APAKAH INI PENGISIAN PERTAMA KALI (Incomplete)
-    $isFirstTime = !$anggota || $anggota->status_verifikasi === 'Incomplete';
+    // CEK APAKAH INI PENGISIAN PERTAMA KALI (Incomplete) ATAU PERBAIKAN KARENA DITOLAK (Rejected)
+    $isFirstTime = !$anggota || in_array($anggota->status_verifikasi, ['Incomplete', 'Rejected']);
 
     // ATURAN VALIDASI DASAR
     $rules = [
@@ -717,6 +720,11 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
     }
 
     $statusBaru = $ubahStatusVerif ? 'Pending' : ($anggota?->status_verifikasi ?? 'Incomplete');
+
+    // Jika status sebelumnya Rejected (ditolak), otomatis ubah menjadi Pending agar Admin bisa mengecek ulang data terbarunya
+    if ($anggota && $anggota->status_verifikasi === 'Rejected') {
+        $statusBaru = 'Pending';
+    }
 
     if ($anggota) {
         $anggota->update([
