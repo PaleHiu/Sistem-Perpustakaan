@@ -40,6 +40,73 @@
         .pagination-links .hidden {
             display: none;
         }
+
+        /* --- PAGINATION BUTTON STYLE --- */
+
+        /* 1. Sembunyikan teks "Showing 1 to 5..." bawaan Laravel */
+        .pagination-links nav > div:first-child,
+        .pagination-links p {
+            display: none !important;
+        }
+
+        /* 2. Container untuk jejeran tombol angka */
+        .pagination-links .relative.z-0.inline-flex {
+            display: flex;
+            gap: 8px; /* Jarak antar tombol */
+            box-shadow: none !important; /* Hilangkan garis bayangan bawaan */
+        }
+
+        /* 3. Style dasar untuk semua tombol (Angka dan Panah) */
+        .pagination-links .relative.z-0.inline-flex a,
+        .pagination-links .relative.z-0.inline-flex span[aria-disabled="true"] span,
+        .pagination-links .relative.z-0.inline-flex span[aria-current="page"] span {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px !important; /* Membuat kotak bersudut tumpul */
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid #e2e8f0;
+            background-color: white;
+            color: #4a5568;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            padding: 0 !important; /* Menghapus padding bawaan */
+            margin: 0 !important; /* Menghapus jarak negatif bawaan */
+        }
+
+        /* 4. Efek saat kursor diarahkan ke tombol (Hover) */
+        .pagination-links .relative.z-0.inline-flex a:hover {
+            background-color: #f0fff4;
+            border-color: #1fcf8e;
+            color: #1fcf8e;
+            transform: translateY(-2px); /* Efek tombol terangkat */
+        }
+
+        /* 5. Style untuk halaman yang sedang aktif */
+        .pagination-links .relative.z-0.inline-flex span[aria-current="page"] span {
+            background-color: #1fcf8e;
+            color: white;
+            border-color: #1fcf8e;
+            box-shadow: 0 4px 10px rgba(31, 207, 142, 0.3);
+        }
+
+        /* 6. Style untuk panah yang tidak bisa diklik (Disabled) */
+        .pagination-links .relative.z-0.inline-flex span[aria-disabled="true"] span {
+            background-color: #f7fafc;
+            color: #cbd5e0;
+            cursor: not-allowed;
+            border-color: #edf2f7;
+        }
+
+        /* 7. Perbaiki ukuran ikon panah SVG di dalam tombol */
+        .pagination-links svg {
+            width: 18px;
+            height: 18px;
+        }
     </style>
 </head>
 <body>
@@ -207,11 +274,13 @@
 
         <!-- PAGINATION -->
         <div class="pagination-container" style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
-            <span class="pagination-info" style="font-size:13px; color:#718096;">
+            <!-- Teks custom kamu dipertahankan -->
+            <span class="pagination-info" style="font-size:13px; color:#718096; text-align:center;">
                 Menampilkan {{ $books->firstItem() ?? 0 }} - {{ $books->lastItem() ?? 0 }} dari total {{ $books->total() ?? 0 }} buku
             </span>
-            <div class="pagination-links">
-                {{-- Ini adalah kode ajaib pemanggil tombol halaman Laravel --}}
+            
+            <!-- Wrapper utama pagination -->
+            <div class="pagination-links" style="display: flex; justify-content: center;">
                 {{ $books->links() }} 
             </div>
         </div>
