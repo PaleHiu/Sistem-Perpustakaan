@@ -63,8 +63,8 @@
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            width: 38px;
-            height: 38px;
+            width: 70px;
+            height: 70px;
             border-radius: 10px !important; /* Membuat kotak bersudut tumpul */
             font-size: 14px;
             font-weight: 600;
