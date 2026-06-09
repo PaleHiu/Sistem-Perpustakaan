@@ -14,7 +14,7 @@ public function run(): void
     // 1. Buat User untuk Login Admin
     $userId = DB::table('users')->insertGetId([
         'email'      => 'admin@sipus.id',
-        'password'   => Hash::make('Admin123'),
+        'password'   => Hash::make('superadmin'),
         'role'       => 'Petugas',
         'created_at' => now(),
         'updated_at' => now(),
