@@ -12,101 +12,6 @@
         .form-input { width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;outline:none;transition:border-color .2s; }
         .form-input:focus { border-color:#1fcf8e;box-shadow:0 0 0 3px rgba(31,207,142,.15); }
         #tabelBuku thead th { position: sticky; top: 0; background-color: white; z-index: 10; border-bottom: 2px solid #e2e8f0; }  
-        
-        /* --- FIX PAGINATION LARAVEL --- */
-        .pagination-links svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .pagination-links nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        /* Memperbaiki barisan angka dan panah agar menyamping rapi */
-        .pagination-links nav > div:not(:first-child) {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* (Opsional) Sembunyikan teks "Showing 1 to 5..." bawaan Laravel 
-        karena kamu sudah membuat teks "Menampilkan..." sendiri */
-        .pagination-links nav > div:first-child p,
-        .pagination-links .hidden {
-            display: none;
-        }
-
-        /* --- PAGINATION BUTTON STYLE --- */
-
-        /* 1. Sembunyikan teks "Showing 1 to 5..." bawaan Laravel */
-        .pagination-links nav > div:first-child,
-        .pagination-links p {
-            display: none !important;
-        }
-
-        /* 2. Container untuk jejeran tombol angka */
-        .pagination-links .relative.z-0.inline-flex {
-            display: flex;
-            gap: 8px; /* Jarak antar tombol */
-            box-shadow: none !important; /* Hilangkan garis bayangan bawaan */
-        }
-
-        /* 3. Style dasar untuk semua tombol (Angka dan Panah) */
-        .pagination-links .relative.z-0.inline-flex a,
-        .pagination-links .relative.z-0.inline-flex span[aria-disabled="true"] span,
-        .pagination-links .relative.z-0.inline-flex span[aria-current="page"] span {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            width: 70px;
-            height: 70px;
-            border-radius: 10px !important; /* Membuat kotak bersudut tumpul */
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            border: 1px solid #e2e8f0;
-            background-color: white;
-            color: #4a5568;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            padding: 0 !important; /* Menghapus padding bawaan */
-            margin: 0 !important; /* Menghapus jarak negatif bawaan */
-        }
-
-        /* 4. Efek saat kursor diarahkan ke tombol (Hover) */
-        .pagination-links .relative.z-0.inline-flex a:hover {
-            background-color: #f0fff4;
-            border-color: #1fcf8e;
-            color: #1fcf8e;
-            transform: translateY(-2px); /* Efek tombol terangkat */
-        }
-
-        /* 5. Style untuk halaman yang sedang aktif */
-        .pagination-links .relative.z-0.inline-flex span[aria-current="page"] span {
-            background-color: #1fcf8e;
-            color: white;
-            border-color: #1fcf8e;
-            box-shadow: 0 4px 10px rgba(31, 207, 142, 0.3);
-        }
-
-        /* 6. Style untuk panah yang tidak bisa diklik (Disabled) */
-        .pagination-links .relative.z-0.inline-flex span[aria-disabled="true"] span {
-            background-color: #f7fafc;
-            color: #cbd5e0;
-            cursor: not-allowed;
-            border-color: #edf2f7;
-        }
-
-        /* 7. Perbaiki ukuran ikon panah SVG di dalam tombol */
-        .pagination-links svg {
-            width: 18px;
-            height: 18px;
-        }
     </style>
 </head>
 <body>
@@ -183,106 +88,105 @@
             </div>
         </div>
 
-        <!-- TABLE -->
-        <div class="card table-wrapper" style="max-height: 450px; overflow-y: auto; position: relative;">
-            <table id="tabelBuku">
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Cover</th>
-                        <th>Title & Author</th>
-                        <th>Category</th>
-                        <th>Publisher</th>
-                        <th>Year</th>
-                        <th>Stock</th>
-                        <th>Status</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($books ?? [] as $index => $book)
-                    <tr data-judul="{{ strtolower($book->judul) }}"
-                        data-penulis="{{ strtolower($book->penulis) }}">
-                        <td>{{ $index + 1 }}</td>
-                        <td>
-                            @if($book->cover)
-                                <img src="{{ asset('storage/' . $book->cover) }}" alt="Cover" class="book-cover">
-                            @else
-                                <div style="width:40px;height:55px;background:#e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;">
-                                    <i class="fa-solid fa-book" style="color:#a0aec0;font-size:16px;"></i>
-                                </div>
-                            @endif
-                        </td>
-                        <td>
-                            <strong class="text-dark">{{ $book->judul }}</strong><br>
-                            <small class="text-muted">{{ $book->penulis }}</small>
-                        </td>
-                        <td class="text-muted">{{ $book->kategori->nama_kategori ?? '-' }}</td>
-                        <td class="text-muted">{{ $book->penerbit }}</td>
-                        <td class="text-muted">{{ $book->tahun_terbit }}</td>
-                        <td><strong>{{ $book->stok_tersedia }}</strong></td>
-                        <td>
-                            <span class="status {{ $book->stok_tersedia > 0 ? 'done' : 'late' }}">
-                                {{ $book->stok_tersedia > 0 ? 'Tersedia' : 'Habis' }}
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <a href="#" class="action-icon icon-detail" title="Detail"
-                               onclick="bukaModalDetail(
-                                   '{{ addslashes($book->judul) }}',
-                                   '{{ addslashes($book->penulis) }}',
-                                   '{{ addslashes($book->penerbit) }}',
-                                   '{{ $book->tahun_terbit }}',
-                                   '{{ addslashes($book->kategori->nama_kategori ?? '-') }}',
-                                   {{ $book->stok_total }},
-                                   {{ $book->stok_tersedia }},
-                                   '{{ $book->cover ? asset('storage/'.$book->cover) : '' }}'
-                               )">
-                                <i class="fa-solid fa-eye"></i>
-                            </a>
-                            <a href="#" class="action-icon icon-edit" title="Edit"
-                               onclick="bukaModalEdit(
-                                   {{ $book->id }},
-                                   '{{ addslashes($book->judul) }}',
-                                   '{{ addslashes($book->penulis) }}',
-                                   '{{ addslashes($book->penerbit) }}',
-                                   '{{ $book->tahun_terbit }}',
-                                   {{ $book->kategori_id }},
-                                   {{ $book->stok_total }},
-                                   {{ $book->stok_tersedia }}
-                               )">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </a>
-                            <a href="#" class="action-icon" title="Hapus"
-                               style="color:#e53e3e;margin-left:4px;"
-                               onclick="konfirmasiHapusBuku({{ $book->id }}, '{{ addslashes($book->judul) }}')">
-                                <i class="fa-solid fa-trash"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="9" class="empty-state">
-                            <i class="fa-solid fa-book-open-reader"></i><br>
-                            Belum ada data buku yang ditambahkan.
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+        <div class="card table-wrapper">
+    <table id="tabelBuku">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Cover</th>
+                <th>Title & Author</th>
+                <th>Category</th>
+                <th>Publisher</th>
+                <th>Year</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($books ?? [] as $index => $book)
+            <tr data-judul="{{ strtolower($book->judul) }}"
+                data-penulis="{{ strtolower($book->penulis) }}">
+                <td>{{ $index + 1 }}</td>
+                <td>
+                    @if($book->cover)
+                        <img src="{{ asset('storage/' . $book->cover) }}" alt="Cover" class="book-cover">
+                    @else
+                        <div style="width:40px;height:55px;background:#e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-book" style="color:#a0aec0;font-size:16px;"></i>
+                        </div>
+                    @endif
+                </td>
+                <td>
+                    <strong class="text-dark">{{ $book->judul }}</strong><br>
+                    <small class="text-muted">{{ $book->penulis }}</small>
+                </td>
+                <td class="text-muted">{{ $book->kategori->nama_kategori ?? '-' }}</td>
+                <td class="text-muted">{{ $book->penerbit }}</td>
+                <td class="text-muted">{{ $book->tahun_terbit }}</td>
+                <td><strong>{{ $book->stok_tersedia }}</strong></td>
+                <td>
+                    <span class="status {{ $book->stok_tersedia > 0 ? 'done' : 'late' }}">
+                        {{ $book->stok_tersedia > 0 ? 'Tersedia' : 'Habis' }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <a href="#" class="action-icon icon-detail" title="Detail"
+                       onclick="bukaModalDetail(
+                           '{{ addslashes($book->judul) }}',
+                           '{{ addslashes($book->penulis) }}',
+                           '{{ addslashes($book->penerbit) }}',
+                           '{{ $book->tahun_terbit }}',
+                           '{{ addslashes($book->kategori->nama_kategori ?? '-') }}',
+                           {{ $book->stok_total }},
+                           {{ $book->stok_tersedia }},
+                           '{{ $book->cover ? asset('storage/'.$book->cover) : '' }}'
+                       )">
+                        <i class="fa-solid fa-eye"></i>
+                    </a>
+                    <a href="#" class="action-icon icon-edit" title="Edit"
+                       onclick="bukaModalEdit(
+                           {{ $book->id }},
+                           '{{ addslashes($book->judul) }}',
+                           '{{ addslashes($book->penulis) }}',
+                           '{{ addslashes($book->penerbit) }}',
+                           '{{ $book->tahun_terbit }}',
+                           {{ $book->kategori_id }},
+                           {{ $book->stok_total }},
+                           {{ $book->stok_tersedia }}
+                       )">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </a>
+                    <a href="#" class="action-icon" title="Hapus"
+                       style="color:#e53e3e;margin-left:4px;"
+                       onclick="konfirmasiHapusBuku({{ $book->id }}, '{{ addslashes($book->judul) }}')">
+                        <i class="fa-solid fa-trash"></i>
+                    </a>
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="9" class="empty-state" style="text-align: center; padding: 40px;">
+                    <i class="fa-solid fa-book-open-reader" style="font-size: 32px; color: #cbd5e0; margin-bottom: 10px;"></i><br>
+                    <span style="color: #718096;">Belum ada data buku yang ditambahkan.</span>
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
 
         <!-- PAGINATION -->
         <div class="pagination-container" style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
             <!-- Teks custom kamu dipertahankan -->
-            <span class="pagination-info" style="font-size:13px; color:#718096; text-align:center;">
-                Menampilkan {{ $books->firstItem() ?? 0 }} - {{ $books->lastItem() ?? 0 }} dari total {{ $books->total() ?? 0 }} buku
-            </span>
-            
+           
             <!-- Wrapper utama pagination -->
             <div class="pagination-links" style="display: flex; justify-content: center;">
                 {{ $books->links() }} 
             </div>
+             <span class="pagination-info" style="font-size:13px; color:#718096; text-align:center;">
+                Menampilkan {{ $books->firstItem() ?? 0 }} - {{ $books->lastItem() ?? 0 }} dari total {{ $books->total() ?? 0 }} buku
+            </span>
         </div>
 
         <!-- STATS -->
