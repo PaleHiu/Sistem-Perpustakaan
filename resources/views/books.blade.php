@@ -11,6 +11,7 @@
         .form-label { font-size:11px;font-weight:700;letter-spacing:.08em;color:#a0aec0;text-transform:uppercase;display:block;margin-bottom:6px; }
         .form-input { width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;outline:none;transition:border-color .2s; }
         .form-input:focus { border-color:#1fcf8e;box-shadow:0 0 0 3px rgba(31,207,142,.15); }
+        #tabelBuku thead th { position: sticky; top: 0; background-color: white; z-index: 10; border-bottom: 2px solid #e2e8f0; }    
     </style>
 </head>
 <body>
@@ -88,7 +89,7 @@
         </div>
 
         <!-- TABLE -->
-        <div class="card table-wrapper">
+        <div class="card table-wrapper" style="max-height: 450px; overflow-y: auto; position: relative;">
             <table id="tabelBuku">
                 <thead>
                     <tr>
@@ -177,10 +178,13 @@
         </div>
 
         <!-- PAGINATION -->
-        <div class="pagination-container">
-            <span class="pagination-info">Showing {{ count($books ?? []) }} results</span>
+        <div class="pagination-container" style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+            <span class="pagination-info" style="font-size:13px; color:#718096;">
+                Menampilkan {{ $books->firstItem() ?? 0 }} - {{ $books->lastItem() ?? 0 }} dari total {{ $books->total() ?? 0 }} buku
+            </span>
             <div class="pagination-links">
-                <span class="page-item active">1</span>
+                {{-- Ini adalah kode ajaib pemanggil tombol halaman Laravel --}}
+                {{ $books->links() }} 
             </div>
         </div>
 

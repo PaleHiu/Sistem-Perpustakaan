@@ -174,14 +174,22 @@ Route::get('/dashboard', function () {
 
 Route::get('/books', function () {
     if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
-    $books     = \App\Models\Buku::with('kategori')->latest()->get();
+    
+    // 1. Hitung Statistik Keseluruhan (Pisahkan dari variabel paginasi)
+    $totalTitles  = \App\Models\Buku::count();
+    $totalItems   = \App\Models\Buku::sum('stok_total');
+    $lowStock     = \App\Models\Buku::where('stok_tersedia', '<', 5)->count();
+    
+    // 2. Ambil data buku dengan Paginasi (Batasi misal 5 baris per halaman)
+    $books     = \App\Models\Buku::with('kategori')->latest()->paginate(5);
     $kategoris = \App\Models\Kategori::all();
+
     return view('books', [
         'books'        => $books,
         'kategoris'    => $kategoris,
-        'totalTitles'  => $books->count(),
-        'totalItems'   => $books->sum('stok_total'),
-        'lowStock'     => $books->where('stok_tersedia', '<', 5)->count(),
+        'totalTitles'  => $totalTitles,
+        'totalItems'   => $totalItems,
+        'lowStock'     => $lowStock,
         'reservations' => 0,
     ]);
 })->middleware(['auth'])->name('books.index');
