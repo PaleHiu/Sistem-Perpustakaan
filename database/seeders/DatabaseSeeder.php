@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             PetugasSeeder::class,
+            KategoriSeeder::class,
         ]);
     }
 }

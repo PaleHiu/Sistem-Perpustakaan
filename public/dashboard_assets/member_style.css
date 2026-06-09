@@ -1,0 +1,220 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background: #eef2f5;
+}
+
+.container {
+    display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    background: #1f3b4d;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar .sub {
+    font-size: 12px;
+    opacity: .7;
+    margin-bottom: 20px;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar li {
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.sidebar li.active {
+    background: #2bb673;
+}
+
+/* USER */
+.user button {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid white;
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.user button:hover {
+    background: #e74c3c;
+    border-color: #e74c3c;
+}
+
+/* MAIN */
+.main {
+    flex: 1;
+    padding: 25px;
+}
+
+.breadcrumb {
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.breadcrumb span {
+    color: #2bb673;
+}
+
+/* ALERT */
+.alert {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+/* CARD */
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+.card-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+/* BOOK */
+.book {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.book img {
+    width: 60px;
+    border-radius: 6px;
+}
+
+.book p {
+    color: #777;
+    font-size: 13px;
+}
+
+/* PROGRESS */
+.progress {
+    height: 6px;
+    border-radius: 10px;
+    margin-top: 8px;
+}
+
+.progress.red {
+    background: #e74c3c;
+    width: 100%;
+}
+
+.progress.green {
+    background: #27ae60;
+    width: 60%;
+}
+
+/* BUTTON */
+.btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 25px;
+    border: 2px solid #2bb673;
+    background: transparent;
+    color: #2bb673;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.btn:hover {
+    background: #2bb673;
+    color: white;
+}
+
+/* TABLE */
+table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+
+td {
+    padding: 10px 0;
+}
+
+/* BADGE */
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.badge.blue {
+    background: #d0e7ff;
+    color: #0056b3;
+}
+
+.badge.green {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* RIGHT */
+.stat {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 15px;
+}
+
+.red-border {
+    border-bottom: 4px solid red;
+}
+
+.danger {
+    color: red;
+}
+
+/* MEMBER */
+.member {
+    background: #1f3b4d;
+    color: white;
+    padding: 20px;
+    border-radius: 16px;
+}
+
+.member button {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 20px;
+    background: #2bb673;
+    color: white;
+    cursor: pointer;
+}
