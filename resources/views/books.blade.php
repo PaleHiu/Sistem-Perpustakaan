@@ -11,6 +11,102 @@
         .form-label { font-size:11px;font-weight:700;letter-spacing:.08em;color:#a0aec0;text-transform:uppercase;display:block;margin-bottom:6px; }
         .form-input { width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;outline:none;transition:border-color .2s; }
         .form-input:focus { border-color:#1fcf8e;box-shadow:0 0 0 3px rgba(31,207,142,.15); }
+        #tabelBuku thead th { position: sticky; top: 0; background-color: white; z-index: 10; border-bottom: 2px solid #e2e8f0; }  
+        
+        /* --- FIX PAGINATION LARAVEL --- */
+        .pagination-links svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .pagination-links nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Memperbaiki barisan angka dan panah agar menyamping rapi */
+        .pagination-links nav > div:not(:first-child) {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* (Opsional) Sembunyikan teks "Showing 1 to 5..." bawaan Laravel 
+        karena kamu sudah membuat teks "Menampilkan..." sendiri */
+        .pagination-links nav > div:first-child p,
+        .pagination-links .hidden {
+            display: none;
+        }
+
+        /* --- PAGINATION BUTTON STYLE --- */
+
+        /* 1. Sembunyikan teks "Showing 1 to 5..." bawaan Laravel */
+        .pagination-links nav > div:first-child,
+        .pagination-links p {
+            display: none !important;
+        }
+
+        /* 2. Container untuk jejeran tombol angka */
+        .pagination-links .relative.z-0.inline-flex {
+            display: flex;
+            gap: 8px; /* Jarak antar tombol */
+            box-shadow: none !important; /* Hilangkan garis bayangan bawaan */
+        }
+
+        /* 3. Style dasar untuk semua tombol (Angka dan Panah) */
+        .pagination-links .relative.z-0.inline-flex a,
+        .pagination-links .relative.z-0.inline-flex span[aria-disabled="true"] span,
+        .pagination-links .relative.z-0.inline-flex span[aria-current="page"] span {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px !important; /* Membuat kotak bersudut tumpul */
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid #e2e8f0;
+            background-color: white;
+            color: #4a5568;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            padding: 0 !important; /* Menghapus padding bawaan */
+            margin: 0 !important; /* Menghapus jarak negatif bawaan */
+        }
+
+        /* 4. Efek saat kursor diarahkan ke tombol (Hover) */
+        .pagination-links .relative.z-0.inline-flex a:hover {
+            background-color: #f0fff4;
+            border-color: #1fcf8e;
+            color: #1fcf8e;
+            transform: translateY(-2px); /* Efek tombol terangkat */
+        }
+
+        /* 5. Style untuk halaman yang sedang aktif */
+        .pagination-links .relative.z-0.inline-flex span[aria-current="page"] span {
+            background-color: #1fcf8e;
+            color: white;
+            border-color: #1fcf8e;
+            box-shadow: 0 4px 10px rgba(31, 207, 142, 0.3);
+        }
+
+        /* 6. Style untuk panah yang tidak bisa diklik (Disabled) */
+        .pagination-links .relative.z-0.inline-flex span[aria-disabled="true"] span {
+            background-color: #f7fafc;
+            color: #cbd5e0;
+            cursor: not-allowed;
+            border-color: #edf2f7;
+        }
+
+        /* 7. Perbaiki ukuran ikon panah SVG di dalam tombol */
+        .pagination-links svg {
+            width: 18px;
+            height: 18px;
+        }
     </style>
 </head>
 <body>
@@ -88,7 +184,7 @@
         </div>
 
         <!-- TABLE -->
-        <div class="card table-wrapper">
+        <div class="card table-wrapper" style="max-height: 450px; overflow-y: auto; position: relative;">
             <table id="tabelBuku">
                 <thead>
                     <tr>
@@ -177,10 +273,15 @@
         </div>
 
         <!-- PAGINATION -->
-        <div class="pagination-container">
-            <span class="pagination-info">Showing {{ count($books ?? []) }} results</span>
-            <div class="pagination-links">
-                <span class="page-item active">1</span>
+        <div class="pagination-container" style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+            <!-- Teks custom kamu dipertahankan -->
+            <span class="pagination-info" style="font-size:13px; color:#718096; text-align:center;">
+                Menampilkan {{ $books->firstItem() ?? 0 }} - {{ $books->lastItem() ?? 0 }} dari total {{ $books->total() ?? 0 }} buku
+            </span>
+            
+            <!-- Wrapper utama pagination -->
+            <div class="pagination-links" style="display: flex; justify-content: center;">
+                {{ $books->links() }} 
             </div>
         </div>
 

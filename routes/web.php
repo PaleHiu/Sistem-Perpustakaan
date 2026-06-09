@@ -24,7 +24,7 @@ Route::get('/', function () {
 // ============================================
 
 Route::get('/sipus/lupa-password', function () {
-    return view('Auth.forgot_password');
+    return view('auth.forgot_password');
 })->name('sipus.forgot.password');
 
 Route::post('/sipus/lupa-password', function (\Illuminate\Http\Request $request) {
@@ -80,7 +80,7 @@ Route::get('/sipus/lupa-password/otp', function () {
     if (!session('reset_email')) {
         return redirect()->route('sipus.forgot.password');
     }
-    return view('Auth.forgot_otp');
+    return view('auth.forgot_otp');
 })->name('sipus.forgot.otp');
 
 Route::post('/sipus/lupa-password/otp', function (\Illuminate\Http\Request $request) {
@@ -117,7 +117,7 @@ Route::get('/sipus/lupa-password/reset', function () {
     if (!session('reset_email') || !session('reset_verified')) {
         return redirect()->route('sipus.forgot.password');
     }
-    return view('Auth.forgot_reset');
+    return view('auth.forgot_reset');
 })->name('sipus.forgot.reset');
 
 Route::post('/sipus/lupa-password/reset', function (\Illuminate\Http\Request $request) {
@@ -174,14 +174,22 @@ Route::get('/dashboard', function () {
 
 Route::get('/books', function () {
     if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
-    $books     = \App\Models\Buku::with('kategori')->latest()->get();
+    
+    // 1. Hitung Statistik Keseluruhan (Pisahkan dari variabel paginasi)
+    $totalTitles  = \App\Models\Buku::count();
+    $totalItems   = \App\Models\Buku::sum('stok_total');
+    $lowStock     = \App\Models\Buku::where('stok_tersedia', '<', 5)->count();
+    
+    // 2. Ambil data buku dengan Paginasi (Batasi misal 5 baris per halaman)
+    $books     = \App\Models\Buku::with('kategori')->latest()->paginate(5);
     $kategoris = \App\Models\Kategori::all();
+
     return view('books', [
         'books'        => $books,
         'kategoris'    => $kategoris,
-        'totalTitles'  => $books->count(),
-        'totalItems'   => $books->sum('stok_total'),
-        'lowStock'     => $books->where('stok_tersedia', '<', 5)->count(),
+        'totalTitles'  => $totalTitles,
+        'totalItems'   => $totalItems,
+        'lowStock'     => $lowStock,
         'reservations' => 0,
     ]);
 })->middleware(['auth'])->name('books.index');
@@ -593,12 +601,15 @@ Route::delete('/member/peminjaman/{id}/batal', function ($id) {
                     ->where('anggota_id', $anggota->id)
                     ->where('status_transaksi', 'Menunggu OTP')->firstOrFail();
 
-    foreach ($peminjaman->detailPeminjaman as $detail) {
-        if ($detail->buku) $detail->buku->increment('stok_tersedia');
-    }
-
-    $peminjaman->update(['status_transaksi' => 'Batal']);
-    return redirect()->route('member.peminjaman')->with('success', 'Booking berhasil dibatalkan.');
+    // Gunakan Transaction agar penambahan stok dan perubahan status terikat menjadi 1 kesatuan
+    \Illuminate\Support\Facades\DB::transaction(function () use ($peminjaman) {
+        foreach ($peminjaman->detailPeminjaman as $detail) {
+            if ($detail->buku) $detail->buku->increment('stok_tersedia');
+        }
+        $peminjaman->update(['status_transaksi' => 'Batal']);
+    });
+    
+    return redirect()->route('member.peminjaman')->with('success', 'Booking berhasil dibatalkan. Stok buku telah dikembalikan.');
 })->middleware(['auth', 'verified'])->name('member.peminjaman.batal');
 
 // Riwayat — blokir jika belum approved
@@ -664,8 +675,8 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
         return redirect()->route('member.profil')->with('error', 'Data Anda sedang diverifikasi. Anda tidak dapat mengubah data saat ini.');
     }
 
-    // CEK APAKAH INI PENGISIAN PERTAMA KALI (Incomplete)
-    $isFirstTime = !$anggota || $anggota->status_verifikasi === 'Incomplete';
+    // CEK APAKAH INI PENGISIAN PERTAMA KALI (Incomplete) ATAU PERBAIKAN KARENA DITOLAK (Rejected)
+    $isFirstTime = !$anggota || in_array($anggota->status_verifikasi, ['Incomplete', 'Rejected']);
 
     // ATURAN VALIDASI DASAR
     $rules = [
@@ -718,12 +729,17 @@ Route::post('/member/profil/update', function (\Illuminate\Http\Request $request
 
     $statusBaru = $ubahStatusVerif ? 'Pending' : ($anggota?->status_verifikasi ?? 'Incomplete');
 
+    // Jika status sebelumnya Rejected (ditolak), otomatis ubah menjadi Pending agar Admin bisa mengecek ulang data terbarunya
+    if ($anggota && $anggota->status_verifikasi === 'Rejected') {
+        $statusBaru = 'Pending';
+    }
+
     if ($anggota) {
         $anggota->update([
             'nama_lengkap'      => $request->nama_lengkap,
             'no_hp'             => $request->no_hp,
             'alamat'            => $request->alamat,
-            'nik'               => $anggota->nik ?: $request->nik, // Kunci permanen NIK jika sudah ada
+            'nik'               => ($anggota->status_verifikasi === 'Rejected') ? $request->nik : ($anggota->nik ?: $request->nik), // Kunci permanen NIK jika sudah ada
             'foto_profil'       => $fotoProfil,
             'dokumen_identitas' => $dokumenIdentitas,
             'status_verifikasi' => $statusBaru,

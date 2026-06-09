@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Book; // Pastikan kamu sudah punya model Book
+use App\Models\Buku;
 use Illuminate\Http\Request;
 
 class BookController extends Controller
@@ -11,7 +11,7 @@ class BookController extends Controller
     {
         // Mengambil semua data buku dari database
         // Jika tabel kosong, $books akan berisi array kosong []
-        $books = Book::all(); 
+        $books = Buku::all();
 
         // Mengirim data ke file resources/views/books.blade.php
         return view('books', compact('books'));
