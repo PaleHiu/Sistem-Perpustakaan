@@ -350,16 +350,21 @@ Route::get('/borrowing', function () {
     return view('borrowing', compact('borrowings'));
 })->middleware(['auth'])->name('borrowing.index');
 
+// ============================================
+// ROUTE VALIDASI OTP PEMINJAMAN VIA AJAX
+// ============================================
 Route::post('/borrowing/{id}/validasi', function (\Illuminate\Http\Request $request, $id) {
-    if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
+    if (Auth::user()->role !== 'Petugas') {
+        return response()->json(['success' => false, 'message' => 'Akses ditolak.'], 403);
+    }
 
     $peminjaman = \App\Models\Peminjam::findOrFail($id);
 
     if (strtoupper($peminjaman->kode_otp) !== strtoupper($request->kode_otp)) {
-        return back()->with('error_otp', 'Kode OTP salah! OTP yang dimasukkan: ' . $request->kode_otp);
+        return response()->json(['success' => false, 'message' => 'Kode OTP salah! Periksa kembali kode Anda.'], 400);
     }
     if (\Carbon\Carbon::parse($peminjaman->otp_expired_at)->isPast()) {
-        return back()->with('error_otp', 'Kode OTP sudah kadaluarsa!');
+        return response()->json(['success' => false, 'message' => 'Kode OTP sudah kadaluarsa!'], 400);
     }
 
     $totalSelesai = \App\Models\Peminjam::where('anggota_id', $peminjaman->anggota_id)
@@ -379,29 +384,30 @@ Route::post('/borrowing/{id}/validasi', function (\Illuminate\Http\Request $requ
         'petugas_id'         => $petugas?->id,
     ]);
 
-    return redirect()->route('borrowing.index')
-        ->with('success', 'OTP valid! Peminjaman dikonfirmasi. Durasi: ' . $durasiHari . ' hari (Level ' . $level . ')');
+    return response()->json([
+        'success' => true,
+        'message' => 'Peminjaman Berhasil! OTP Valid. Durasi pinjam ' . $durasiHari . ' hari (Level ' . $level . ').'
+    ]);
 })->middleware(['auth'])->name('borrowing.validasi');
 
+// ============================================
+// ROUTE PROSES PENGEMBALIAN BUKU VIA AJAX
+// ============================================
 Route::post('/borrowing/{id}/kembalikan', function (\Illuminate\Http\Request $request, $id) {
-    // 1. Keamanan Role
-    if (Auth::user()->role !== 'Petugas') return redirect()->route('member.dashboard');
+    if (Auth::user()->role !== 'Petugas') {
+        return response()->json(['success' => false, 'message' => 'Akses ditolak.'], 403);
+    }
 
     $peminjaman = \App\Models\Peminjam::with('detailPeminjaman.buku')->findOrFail($id);
 
-    // ==========================================
-    // 2. VALIDASI KECOCOKAN OTP (Fitur Baru)
-    // ==========================================
     if (strtoupper(trim($request->otp_pengembalian)) !== strtoupper($peminjaman->kode_otp)) {
-        return redirect()->route('borrowing.index')->with('error_otp', 'Gagal! Kode OTP Pengembalian salah atau tidak cocok.');
+        return response()->json(['success' => false, 'message' => 'Gagal! Kode OTP Pengembalian salah atau tidak cocok.'], 400);
     }
 
-    // 3. Pengecekan Status Transaksi
     if ($peminjaman->status_transaksi !== 'Dipinjam') {
-        return redirect()->route('borrowing.index')->with('error_otp', 'Transaksi ini tidak dalam status Dipinjam!');
+        return response()->json(['success' => false, 'message' => 'Transaksi ini tidak dalam status Dipinjam!'], 400);
     }
 
-    // 4. Kalkulasi Denda (Logika Asli Anda)
     $today      = now()->toDateString();
     $batas      = $peminjaman->batas_pengembalian;
     $jumlahBuku = $peminjaman->detailPeminjaman->count();
@@ -412,26 +418,22 @@ Route::post('/borrowing/{id}/kembalikan', function (\Illuminate\Http\Request $re
         $totalDenda    = $hariTerlambat * 1000 * $jumlahBuku;
     }
 
-    // 5. Eksekusi Penyelesaian Transaksi
     $peminjaman->update([
         'status_transaksi'     => 'Selesai',
         'tanggal_dikembalikan' => $today,
         'total_denda'          => $totalDenda,
     ]);
 
-    // 6. Kembalikan Stok Buku ke Katalog
     foreach ($peminjaman->detailPeminjaman as $detail) {
         if ($detail->buku) $detail->buku->increment('stok_tersedia');
     }
 
-    // 7. Siapkan Pesan Berhasil
     $pesan = $totalDenda > 0
         ? 'Verifikasi OTP berhasil! Buku dikembalikan. Denda: Rp ' . number_format($totalDenda, 0, ',', '.')
         : 'Verifikasi OTP berhasil! Buku dikembalikan. Tidak ada denda.';
 
-    return redirect()->route('borrowing.index')->with('success', $pesan);
+    return response()->json(['success' => true, 'message' => $pesan]);
 })->middleware(['auth'])->name('borrowing.kembalikan');
-
 // ============================================
 // ROUTE MEMBER
 // Helper: cek apakah anggota sudah approved
