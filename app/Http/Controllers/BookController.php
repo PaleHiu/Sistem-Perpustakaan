@@ -11,7 +11,7 @@ class BookController extends Controller
     {
         // Mengambil semua data buku dari database
         // Jika tabel kosong, $books akan berisi array kosong []
-        $books = Buku::all();
+        $books = Book::paginate(5);
 
         // Mengirim data ke file resources/views/books.blade.php
         return view('books', compact('books'));

@@ -213,6 +213,8 @@
             </div>
             <button onclick="tutupModal()" style="background:none;border:none;font-size:22px;color:#a0aec0;cursor:pointer;">×</button>
         </div>
+
+        <div id="modal-ajax-alert" style="display:none; border-radius:10px; padding:12px 20px; margin-bottom:15px; font-size:14px; align-items:center; gap:10px; font-weight:600;"></div>
         <div style="background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div><p style="font-size:11px;color:#a0aec0;font-weight:600;letter-spacing:0.05em;margin-bottom:4px;">ANGGOTA</p><p id="modal-anggota" style="font-size:14px;font-weight:700;color:#1a202c;"></p><span id="modal-anggota-id" style="background:#edf2f7;color:#718096;font-size:11px;padding:2px 8px;border-radius:4px;"></span></div>
             <div><p style="font-size:11px;color:#a0aec0;font-weight:600;letter-spacing:0.05em;margin-bottom:4px;">PETUGAS</p><p id="modal-petugas" style="font-size:14px;font-weight:700;color:#1a202c;"></p></div>
@@ -304,12 +306,18 @@ function tutupModal() {
     document.body.style.overflow = '';
     if (window.otpInterval) clearInterval(window.otpInterval);
 }
+
 function tutupModalPeminjaman(event) {
     if (event.target === document.getElementById('modal-peminjaman')) tutupModal();
 }
+
 function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
                               denda, status, borrowId, otpSisaDetik,
                               tglPinjam, batasKembali, hariTerlambat, jumlahBuku, judulBuku, coverUrl) {
+    // Sembunyikan notifikasi AJAX lama setiap kali membuka modal baru
+    const ajaxAlert = document.getElementById('modal-ajax-alert');
+    if (ajaxAlert) ajaxAlert.style.display = 'none';
+
     document.getElementById('modal-trx-title').textContent   = 'Detail Peminjaman #' + kodeOtp;
     document.getElementById('modal-status-label').textContent = 'STATUS: ' + status.toUpperCase();
     document.getElementById('modal-anggota').textContent      = anggota;
@@ -318,9 +326,11 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
     document.getElementById('modal-tgl-pinjam').textContent   = tglPinjam !== '-' ? tglPinjam : 'Belum dipinjam';
     document.getElementById('modal-judul-buku').textContent   = judulBuku;
     document.getElementById('modal-jumlah-buku').textContent  = jumlahBuku + ' judul buku';
+    
     const batasEl = document.getElementById('modal-batas');
     batasEl.textContent = batasKembali !== '-' ? batasKembali : '-';
     batasEl.style.color = hariTerlambat > 0 ? '#e53e3e' : '#2d3748';
+    
     const coverEl = document.getElementById('modal-cover-borrowing');
     if (coverUrl && coverUrl !== '') {
         coverEl.innerHTML = '<img src="' + coverUrl + '" style="width:100%;height:100%;object-fit:cover;">';
@@ -329,8 +339,10 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
         coverEl.style.background = 'linear-gradient(135deg,#1f3c45,#2d6a5a)';
         coverEl.innerHTML = '<i class="fa-solid fa-book" style="color:rgba(255,255,255,0.7);font-size:16px;"></i>';
     }
+    
     document.getElementById('form-validasi-otp').action = '/borrowing/' + borrowId + '/validasi';
     document.getElementById('form-kembalikan').action   = '/borrowing/' + borrowId + '/kembalikan';
+    
     // Reset tampilan area kembalikan
     document.getElementById('btn-tampilkan-otp-kembali').style.display = 'flex';
     document.getElementById('area-input-otp-kembali').style.display    = 'none';
@@ -339,7 +351,9 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
     document.getElementById('kembalikan-section').style.display = 'none';
     document.getElementById('btn-tutup-saja').style.display     = 'none';
     document.getElementById('denda-section').style.display      = 'none';
+    
     if (window.otpInterval) clearInterval(window.otpInterval);
+    
     if (status === 'Menunggu OTP') {
         document.getElementById('otp-section').style.display = 'block';
         document.getElementById('input-otp-langsung').value  = '';
@@ -364,9 +378,11 @@ function bukaModalPeminjaman(kodeOtp, anggota, anggotaId, petugas, tanggal,
             document.getElementById('modal-buku-x').textContent = jumlahBuku;
         }
     }
+    
     document.getElementById('modal-peminjaman').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
+
 function mulaiTimerOTP(detik) {
     if (window.otpInterval) clearInterval(window.otpInterval);
     const timerEl = document.getElementById('otp-timer');
@@ -381,11 +397,64 @@ function mulaiTimerOTP(detik) {
     tick();
     window.otpInterval = setInterval(tick, 1000);
 }
+
+// ==============================================================
+// MODIFIKASI FUNGSI VALIDASI OTP AJAX (TANPA REFRESH HALAMAN)
+// ==============================================================
 function konfirmasiOTP() {
     const otp = document.getElementById('input-otp-langsung').value.trim().toUpperCase();
     if (otp.length < 6) { alert('Masukkan kode OTP lengkap (6 karakter)!'); return; }
-    document.getElementById('input-otp-hidden').value = otp;
-    document.getElementById('form-validasi-otp').submit();
+    
+    const form = document.getElementById('form-validasi-otp');
+    const url = form.action;
+    const token = form.querySelector('input[name="_token"]').value;
+    const alertEl = document.getElementById('modal-ajax-alert');
+    const btn = form.querySelector('button');
+    
+    // Ubah status tombol menjadi loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ kode_otp: otp })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Tampilkan alert sukses
+            alertEl.style.display = 'flex';
+            alertEl.style.background = '#f0fff4';
+            alertEl.style.border = '1px solid #c6f6d5';
+            alertEl.style.color = '#38a169';
+            alertEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+            
+            // Sembunyikan form dan refresh setelah jeda agar pesan terbaca
+            document.getElementById('otp-section').style.display = 'none';
+            setTimeout(() => { location.reload(); }, 1200); 
+        } else {
+            // Tampilkan alert gagal
+            alertEl.style.display = 'flex';
+            alertEl.style.background = '#fff5f5';
+            alertEl.style.border = '1px solid #fed7d7';
+            alertEl.style.color = '#e53e3e';
+            alertEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + data.message;
+            
+            // Kembalikan tombol ke semula
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi Peminjaman';
+        }
+    })
+    .catch(error => {
+        alert('Terjadi kendala jaringan pada server.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi Peminjaman';
+    });
 }
 
 function tampilkanInputOtpKembali() {
@@ -397,7 +466,9 @@ function tampilkanInputOtpKembali() {
     setTimeout(() => document.getElementById('input-otp-kembali').focus(), 100);
 }
 
-// Fungsi validasi final sebelum dikirim ke web.php
+// ==============================================================
+// MODIFIKASI FUNGSI KEMBALIKAN BUKU AJAX (TANPA REFRESH HALAMAN)
+// ==============================================================
 function konfirmasiKembalikanFinal() {
     const otp = document.getElementById('input-otp-kembali').value.trim();
     if (otp.length < 6) { 
@@ -406,10 +477,59 @@ function konfirmasiKembalikanFinal() {
     }
     
     if (confirm('Verifikasi OTP ini dan selesaikan transaksi?')) {
-        document.getElementById('form-kembalikan').submit();
+        const form = document.getElementById('form-kembalikan');
+        const url = form.action;
+        const token = form.querySelector('input[name="_token"]').value;
+        const alertEl = document.getElementById('modal-ajax-alert');
+        const btn = form.querySelector('button');
+        
+        // Ubah status tombol menjadi loading
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ otp_pengembalian: otp })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Tampilkan alert sukses
+                alertEl.style.display = 'flex';
+                alertEl.style.background = '#f0fff4';
+                alertEl.style.border = '1px solid #c6f6d5';
+                alertEl.style.color = '#38a169';
+                alertEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.message;
+                
+                // Sembunyikan elemen lainnya dan refresh setelah jeda
+                document.getElementById('kembalikan-section').style.display = 'none';
+                document.getElementById('denda-section').style.display = 'none';
+                setTimeout(() => { location.reload(); }, 1200);
+            } else {
+                // Tampilkan alert gagal
+                alertEl.style.display = 'flex';
+                alertEl.style.background = '#fff5f5';
+                alertEl.style.border = '1px solid #fed7d7';
+                alertEl.style.color = '#e53e3e';
+                alertEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> ' + data.message;
+                
+                // Kembalikan tombol ke semula
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi & Selesaikan';
+            }
+        })
+        .catch(error => {
+            alert('Terjadi kendala jaringan pada server.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Konfirmasi & Selesaikan';
+        });
     }
 }
-
 
 function filterTabel() {
     const keyword = document.getElementById('searchInput').value.toLowerCase();
