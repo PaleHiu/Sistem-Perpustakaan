@@ -143,7 +143,7 @@ Route::post('/sipus/lupa-password/reset', function (\Illuminate\Http\Request $re
 })->name('sipus.forgot.reset.save');
 
 // ============================================
-// ROUTE ADMIN (Petugas) — tanpa 'verified'
+// ROUTE ADMIN (Petugas)
 // ============================================
 
 Route::get('/dashboard', function () {
@@ -434,6 +434,8 @@ Route::post('/borrowing/{id}/kembalikan', function (\Illuminate\Http\Request $re
 
     return response()->json(['success' => true, 'message' => $pesan]);
 })->middleware(['auth'])->name('borrowing.kembalikan');
+
+
 // ============================================
 // ROUTE MEMBER
 // Helper: cek apakah anggota sudah approved
